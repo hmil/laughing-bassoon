@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "fileforge",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "lerna": "^3.15.0",
+    "ts-make": "file:../ts-make",
+    "tslib": "^1.10.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitAny": true,
+        "importHelpers": true,
+        "target": "es2015",
+        "module": "es6",
+        "jsx": "react",
+        "moduleResolution": "node",
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "baseUrl": ".",
+        "paths": {
+            "@fileforge/hexview": [ "projects/hexview" ]
+        }
+    },
+}
