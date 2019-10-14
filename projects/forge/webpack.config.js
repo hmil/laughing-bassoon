@@ -20,6 +20,10 @@ module.exports = {
         extensions: ['.tsx', '.ts', '.js'],
         plugins: [new TsconfigPathsPlugin()]
     },
+    externals: {
+        'react': 'React',
+        'react-dom': 'ReactDOM'
+    },
     devServer: {
         publicPath: '/dist/',
         port: 8080

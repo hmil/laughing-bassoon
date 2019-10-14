@@ -1,0 +1,181 @@
+{
+    "type": "application/gzip",
+    "endian": "little",
+    "wordlength": 32,
+    "comments": "GZIP file format, as specified in the GZIP file format specification version 4.3 http://www.zlib.org/rfc-gzip.html",
+    "content": [
+        {
+            "type": "template",
+            "name": "c-string",
+            "description": "A null-terminated C string.",
+            "params": [ "name", "ref" ],
+            "content": [
+                {
+                    "type": "until",
+                    "name": "$name",
+                    "ref": "$ref",
+                    "value": [
+                        {
+                            "type": "const",
+                            "value": [ 0 ],
+                            "size": 8
+                        }
+                    ]
+                }
+            ]
+        }, {
+            "type": "container",
+            "ref": "HEADER",
+            "name": "header",
+            "content": [
+                {
+                    "type": "const",
+                    "name": "Identification",
+                    "size": 16,
+                    "ref": "ID",
+                    "value": [
+                        35615
+                    ]
+                }, {
+                    "type": "const",
+                    "name": "compression method",
+                    "ref": "CM",
+                    "size": 8,
+                    "value": [ 8 ]
+                }, {
+                    "type": "fixed",
+                    "name": "flags",
+                    "ref": "FLG",
+                    "size": 8,
+                    "content": [
+                        {
+                            "type": "flags",
+                            "values": [
+                                { "target": "$FLG[0]", "ref": "FTEXT", "name": "FTEXT", "description": "If FTEXT is set, the file is probably ASCII text. This is an optional indication, which the compressor may set by checking a small amount of the input data to see whether any non-ASCII characters are present. In case of doubt, FTEXT is cleared, indicating binary data. For systems which have different file formats for ascii text and binary data, the decompressor can use FTEXT to choose the appropriate format. We deliberately do not specify the algorithm used to set this bit, since a compressor always has the option of leaving it cleared and a decompressor always has the option of ignoring it and letting some other program handle issues of data conversion." },
+                                { "target": "$FLG[1]", "ref": "FHCRC", "name": "FHCRC", "description": "If FHCRC is set, a CRC16 for the gzip header is present, immediately before the compressed data. The CRC16 consists of the two least significant bytes of the CRC32 for all bytes of the gzip header up to and not including the CRC16. [The FHCRC bit was never set by versions of gzip up to 1.2.4, even though it was documented with a different meaning in gzip 1.2.4.]" },
+                                { "target": "$FLG[2]", "ref": "FEXTRA", "name": "FEXTRA", "description": "If FEXTRA is set, optional extra fields are present, as described in a following section." },
+                                { "target": "$FLG[3]", "ref": "FNAME", "name": "FNAME", "description": "If FNAME is set, an original file name is present, terminated by a zero byte. The name must consist of ISO 8859-1 (LATIN-1) characters; on operating systems using EBCDIC or any other character set for file names, the name must be translated to the ISO LATIN-1 character set. This is the original name of the file being compressed, with any directory components removed, and, if the file being compressed is on a file system with case insensitive names, forced to lower case. There is no original file name if the data was compressed from a source other than a named file; for example, if the source was stdin on a Unix system, there is no file name." },
+                                { "target": "$FLG[4]", "ref": "FCOMMENT", "name": "FCOMMENT", "description": "If FCOMMENT is set, a zero-terminated file comment is present. This comment is not interpreted; it is only intended for human consumption. The comment must consist of ISO 8859-1 (LATIN-1) characters. Line breaks should be denoted by a single line feed character (10 decimal)." },
+                                { "target": "$FLG[5]", "name": "reserved", "description": "Reserved FLG bits must be zero." },
+                                { "target": "$FLG[6]", "name": "reserved", "description": "Reserved FLG bits must be zero." },
+                                { "target": "$FLG[7]", "name": "reserved", "description": "Reserved FLG bits must be zero." }
+                            ]
+                        }
+                    ]
+                }, {
+                    "type": "fixed",
+                    "name": "timestamp",
+                    "ref": "MTIME",
+                    "size": 32,
+                    "description": "This gives the most recent modification time of the original file being compressed. The time is in Unix format, i.e., seconds since 00:00:00 GMT, Jan. 1, 1970. (Note that this may cause problems for MS-DOS and other systems that use local rather than Universal time.) If the compressed data did not come from a file, MTIME is set to the time at which compression started. MTIME = 0 means no time stamp is available."
+                }, {
+                    "type": "fixed",
+                    "name": "extra flags",
+                    "ref": "XFL",
+                    "size": 8,
+                    "content": [
+                        {
+                            "type": "if",
+                            "cond": "$CM == 8",
+                            "then": [{
+                                "type": "enum",
+                                "target": "$XFL",
+                                "values": [
+                                    { "value": [2], "name": "maximum compression", "description": "compressor used maximum compression, slowest algorithm" },
+                                    { "value": [4], "name": "minimum compression", "description": "compressor used fastest algorithm" }
+                                ]
+                            }]
+                        }
+                    ]
+                }, {
+                    "type": "fixed",
+                    "name": "Operating system",
+                    "ref": "OS",
+                    "content": [
+                        {
+                            "type": "enum",
+                            "TODO": "fill in this enum"
+                        }
+                    ]
+                }, {
+                    "type": "if",
+                    "cond": "$FLG.FEXTRA",
+                    "then": [
+                        {
+                            "type": "fixed",
+                            "name": "extra field size",
+                            "ref": "XLEN",
+                            "size": 16
+                        },
+                        {
+                            "type": "fixed",
+                            "name": "extra field",
+                            "size": "$XLEN"
+                        }
+                    ]
+                }, {
+                    "type": "if",
+                    "cond": "$FLG.FNAME",
+                    "then": [
+                        {
+                            "type": "c-string",
+                            "name": "original file name"
+                        }
+                    ]
+                }, {
+                    "type": "if",
+                    "cond": "$FLG.FCOMMENT",
+                    "then": [
+                        {
+                            "type": "c-string",
+                            "name": "file comment"
+                        }
+                    ]
+                }
+            ]
+        }, {
+            "type": "if",
+            "cond": "$FLG.FHCRC",
+            "then": [
+                {
+                    "type": "fixed",
+                    "name": "header CRC",
+                    "size": 16,
+                    "ref": "HCRC",
+                    "content": [
+                        {
+                            "type": "expr",
+                            "target": "HCRC",
+                            "expr": "crc32($HEADER)[15..0]"
+                        }
+                    ]
+                }
+            ]
+        }, {
+            "type": "container",
+            "name": "body",
+            "content": [
+                {
+                    "type": "embed",
+                    "embedType": "application/x.deflate"
+                }
+            ]
+        }, {
+            "type": "container",
+            "name": "trailer",
+            "content": [
+                {
+                    "type": "fixed",
+                    "name": "CRC-32",
+                    "ref": "CRC32",
+                    "size": 32
+                }, {
+                    "type": "fixed",
+                    "name": "input size",
+                    "ref": "ISIZE",
+                    "size": 32
+                }
+            ]
+        }
+    ]
+}

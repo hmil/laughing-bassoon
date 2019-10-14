@@ -1,6 +1,5 @@
-import { task, shell, npm, inputFiles } from "ts-make";
+import { task, shell, npm, inputFiles, artifact } from "ts-make";
 import { buildHexView } from '../hexview/make';
-import { artifact } from 'ts-make/build/artifact';
 
 const { npmInstall } = npm.register();
 
@@ -16,7 +15,7 @@ task('build', () => {
     return artifact('dist/**')
 })
 
-task('start', () => {
+export const start = task('start', () => {
     buildDependencies()
     shell('npm start')
 })

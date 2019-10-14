@@ -1,0 +1,20 @@
+{
+    "type": "fileforge/simple-fields",
+    "endian": "little",
+    "wordlength": 32,
+    "comments": "Simple fields",
+    "content": [{
+        "type": "const",
+        "name": "Identification",
+        "size": 16,
+        "ref": "ID",
+        "value": [
+            35615
+        ]
+    }, {
+        "type": "fixed",
+        "name": "compression method",
+        "ref": "CM",
+        "size": 8
+    }]
+}
