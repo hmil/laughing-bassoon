@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { HexChunk } from './HexChunk';
 import { Chunk, compareChunks } from './Chunk';
+import { hexViewReducer, hexViewInitialState } from './HexViewState';
+import { HexViewContext } from './Context';
+import { CHUNK_SIZE } from './Config';
 
-export const CHUNK_SIZE = 2048;
 
 interface HexViewProps {
     chunks: Chunk[];
@@ -27,6 +29,8 @@ export function HexView(props: HexViewProps) {
 
     const [firstChunk, setFirstChunk] = React.useState(0);
     const [scrollPosition, setScrollPosition] = React.useState(0);
+
+    const [state, dispatch] = React.useReducer(hexViewReducer, hexViewInitialState);
 
     React.useEffect(() => {
         if (sortedChunks.length < 1) {
@@ -83,32 +87,35 @@ export function HexView(props: HexViewProps) {
     }
 
     return (
-        <div    style={{
-            // The purpose of this div is to hide the native scroll bar
-            overflow: 'hidden',
-        }}>
+        <HexViewContext.Provider value={{state, dispatch}}>
             <div    style={{
-                        ...props.style,
-                        overflowY: 'auto',
-                        height: '100%',
-                        width: '100%',
-                        boxSizing: 'content-box',
-                        paddingRight: '20px',
-                        backgroundColor: '#181818',
-                        fontSize: '13px',
-                        lineHeight: '15px'
-                    }}
-                    ref={el => dom.screen = el}
-                    onScroll={onScroll}>
+                // The purpose of this div is to hide the native scroll bar
+                overflow: 'hidden',
+                cursor: 'default'
+            }}>
                 <div    style={{
-                            fontFamily: 'monospace',
-                            padding: '0.5em 1ch'
+                            ...props.style,
+                            overflowY: 'auto',
+                            height: '100%',
+                            width: '100%',
+                            boxSizing: 'content-box',
+                            paddingRight: '20px',
+                            backgroundColor: '#181818',
+                            fontSize: '13px',
+                            lineHeight: '15px'
                         }}
-                        className="hexView"
-                        ref={el => dom.paper = el}>
-                    { sortedChunks.sort(compareChunks).map(renderChunk) }
+                        ref={el => dom.screen = el}
+                        onScroll={onScroll}>
+                    <div    style={{
+                                fontFamily: 'monospace',
+                                padding: '0.5em 1ch'
+                            }}
+                            className="hexView"
+                            ref={el => dom.paper = el}>
+                        { sortedChunks.sort(compareChunks).map(renderChunk) }
+                    </div>
                 </div>
             </div>
-        </div>
+        </HexViewContext.Provider>
     );
 }

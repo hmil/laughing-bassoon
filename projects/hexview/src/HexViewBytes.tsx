@@ -1,6 +1,8 @@
 import * as React from 'react';
-import { HexViewHighlights } from './HexViewHighlights';
+import { HexViewHighlights, HighlightAdapter } from './HexViewHighlights';
 import { useState } from 'react';
+import { HexViewContext } from './Context';
+import { setSelection } from './HexViewActions';
 
 const lineHeight = 15;
 const charWidth = 7.94; // TODO: compute at runtime
@@ -23,24 +25,35 @@ function formatBytesLine(line: Uint8Array) {
     return acc;
 }
 
-export function HexViewBytes(props: { data: Uint8Array }) {
+export interface HexViewBytesProps {
+    data: Uint8Array;
+    offset: number;
+}
+
+const highlightAdapter: HighlightAdapter = {
+    mapByteToCharOffset: (offset: number) => offset * 3 + Math.floor(offset / 4) + Math.floor(offset / 8),
+    byteSize: 2
+}
+
+export function HexViewBytes(props: HexViewBytesProps) {
     const numberOfLines = Math.ceil(props.data.length / 16);
 
-    const [selection, setSelection] = useState({ anchor: 0, drag: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = React.createRef<HTMLDivElement>();
+    const {state, dispatch} = React.useContext(HexViewContext);
 
     function startSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        if (evt.button !== 0) return;
         evt.preventDefault();
         const currentRef = containerRef.current;
         if (currentRef == null) {
             return;
         }
         const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
-        setSelection({
+        dispatch(setSelection({
             anchor: offset,
             drag: offset
-        });
+        }));
         setIsDragging(true);
     }
 
@@ -55,10 +68,10 @@ export function HexViewBytes(props: { data: Uint8Array }) {
         }
         const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
 
-        setSelection({
-            anchor: selection.anchor,
+        dispatch(setSelection({
+            anchor: state.selection.anchor,
             drag: offset
-        });
+        }));
     }
 
     function stopSelection() {
@@ -68,22 +81,28 @@ export function HexViewBytes(props: { data: Uint8Array }) {
 
     return (
         <div    className="hexData"
-                ref={containerRef}
-                onMouseDown={startSelection}
-                onMouseMove={moveSelection}
-                onMouseUp={stopSelection}
                 style={{
                     padding: '0 1ch',
                     whiteSpace: 'pre'
                 }}>
-        <HexViewHighlights selection={{
-            isActive: isDragging, 
-            start: Math.min(selection.anchor, selection.drag), 
-            end: Math.max(selection.anchor, selection.drag)}}></HexViewHighlights>
-        {new Array(numberOfLines).fill(0)
-            .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
-            .join('\n')
-        }
+            <div    ref={containerRef}
+                    onMouseDown={startSelection}
+                    onMouseMove={moveSelection}
+                    onMouseUp={stopSelection}>
+                <HexViewHighlights
+                    offset={props.offset}
+                    selection={{
+                        isActive: isDragging,
+                        start: Math.min(state.selection.anchor, state.selection.drag), 
+                        end: Math.max(state.selection.anchor, state.selection.drag)
+                    }}
+                    adapter={highlightAdapter}
+                    ></HexViewHighlights>
+                {new Array(numberOfLines).fill(0)
+                    .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
+                    .join('\n')
+                }
+            </div>
         </div>
     );
 }
@@ -94,5 +113,5 @@ function mapCoordinatesToOffset(x: number, y: number) {
 
     const lineOffset = Math.floor(Math.floor(char - (char > 12 ? 1 : 0) - (char > 25 ? 1 : 0) - (char > 39 ? 1 : 0)) / 3);
 
-    return line * 16 + lineOffset;
+    return line * 16 + Math.max(0, Math.min(lineOffset, 15));
 }

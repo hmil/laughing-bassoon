@@ -14,8 +14,8 @@ export function HexChunk(props: HexChunkProps) {
             display: 'flex',
         }}>
             <HexViewOffsets from={props.offset} length={props.data.length} />
-            <HexViewBytes data={props.data} />
-            <HexViewAscii data={props.data} />
+            <HexViewBytes offset={props.offset} data={props.data} />
+            <HexViewAscii offset={props.offset} data={props.data} />
         </div>
     );
 }

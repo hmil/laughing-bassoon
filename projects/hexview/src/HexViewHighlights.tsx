@@ -1,28 +1,33 @@
 import * as React from 'react';
-import styled from 'styled-components';
 import { useState } from 'react';
+import { HexViewContext } from './Context';
+import { hoverHighlight } from './HexViewActions';
+import { CHUNK_SIZE } from './Config';
 
 const lineHeight = 15;
 
-const HighlightSegment = styled.div<{
-    color: string;
-    top: number;
-    left: number;
-    width: number;
-    bottom: number;
-}>`
-    position: absolute;
-    border: 1px solid rgba(${props => props.color}, 0.4);
-    background-color: rgba(${props => props.color}, 0.1);
-    left: calc(${props => props.left}ch - 1px);
-    width: calc(${props => props.width}ch + 1px);
-    top: ${props => props.top * lineHeight}px;
-    height: ${props => (props.bottom - props.top + 1) * lineHeight - 1}px;
 
-    .hover > & {
-        border-color: rgba(${props => props.color}, 1);
+function highlightStyle(props: {
+            color: string;
+            top: number;
+            left: number;
+            width: number;
+            bottom: number;
+            hover: boolean;
+        }): React.CSSProperties {
+    return {
+        position: 'absolute',
+        borderTop: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
+        borderBottom: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
+        borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
+        borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
+        backgroundColor: `rgba(${props.color}, 0.1)`,
+        left: `calc(${props.left}ch - 1px)`,
+        width: `calc(${props.width}ch + 1px)`,
+        top: `${props.top * lineHeight}px`,
+        height: `${Math.max((props.bottom - props.top + 1) * lineHeight - 1, 0)}px`
     }
-`;
+}
 
 
 interface HighlightProps {
@@ -30,225 +35,219 @@ interface HighlightProps {
     end: number;
     color: string;
     isActive?: boolean;
+    adapter: HighlightAdapter;
+    id: number;
 }
 
 type Direction = 'top' | 'left' | 'bottom' | 'right' | 'center';
 
-function Highlight(props: HighlightProps) {
+function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) {
 
-    const startX = props.start % 16;
-    const endX = props.end % 16;
-    const startY = Math.floor(props.start / 16);
-    const endY = Math.floor(props.end / 16);
+    const startX = start % 16;
+    const endX = end % 16;
+    const startY = Math.floor(start / 16);
+    const endY = Math.floor(end / 16);
 
+    const {state, dispatch} = React.useContext(HexViewContext);
     const [hover, setHover] = useState<'none' | Direction>('none');
     function onMouseEnter(direction: Direction) {
-        return () => setHover(direction);
+        return () => {
+            setHover(direction);
+            dispatch(hoverHighlight({id}));
+        };
     }
     function onMouseLeave(direction: Direction) {
-        return () => hover === direction && setHover('none');
+        return () => {
+            if (hover === direction) {
+                setHover('none');
+                if (state.hoveredHighlight === id) {
+                    dispatch(hoverHighlight({ id: null }));
+                }
+            }
+        }
     }
 
-    const segments: JSX.Element[] = [];
+    function showActive() {
+        return hover !== 'none' || isActive === true;
+    }
 
     if (endY - startY === 0) { // single line
-        segments.push(<HighlightSegment
-            key="first"
+        return <div
+            style={highlightStyle({
+                top: startY,
+                bottom: startY,
+                left: adapter.mapByteToCharOffset(startX),
+                width: adapter.mapByteToCharOffset(endX) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
+                color: color,
+                hover: showActive()
+            })}
             onMouseEnter={onMouseEnter('top')}
             onMouseLeave={onMouseLeave('top')}
-            top={startY}
-            bottom={startY}
-            left={byteOffsetToHexViewLine(startX)}
-            width={byteOffsetToHexViewLine(endX) - byteOffsetToHexViewLine(startX) + 2}
-            color={props.color}></HighlightSegment>);
+        ></div>;
 
     } else if (endY - startY === 1 && startX > endX) { // Two lines, No overlap
-        segments.push(<HighlightSegment
-            key="first"
-            style={{ borderRight: 'none' }}
-            onMouseEnter={onMouseEnter('top')}
-            onMouseLeave={onMouseLeave('top')}
-            top={startY}
-            bottom={startY}
-            left={byteOffsetToHexViewLine(startX)}
-            width={byteOffsetToHexViewLine(15) - byteOffsetToHexViewLine(startX) + 2}
-            color={props.color}></HighlightSegment>);
-        segments.push(<HighlightSegment
-            key="last"
-            style={{ borderLeft: 'none' }}
-            onMouseEnter={onMouseEnter('top')}
-            onMouseLeave={onMouseLeave('top')}
-            top={endY}
-            bottom={endY}
-            left={byteOffsetToHexViewLine(0)}
-            width={byteOffsetToHexViewLine(endX) + 2}
-            color={props.color}></HighlightSegment>);
-    } else {
-        // First line
-        segments.push(<HighlightSegment
-            key="first"
-            style={{
-                borderBottom: 'none',
-                borderRight: 'none'
-            }}
-            onMouseEnter={onMouseEnter('top')}
-            onMouseLeave={onMouseLeave('top')}
-            top={startY}
-            bottom={startY}
-            left={byteOffsetToHexViewLine(startX)}
-            width={byteOffsetToHexViewLine(15) - byteOffsetToHexViewLine(startX) + 2}
-            color={props.color}></HighlightSegment>);
-    
-       
-    
-        if (startX <= endX) { // needs horizontal fill
-            // center segment
-            segments.push(<HighlightSegment
-                key="center"
+        return <div>
+            <div
                 style={{
-                    border: 'none'
-                }}
-                onMouseEnter={onMouseEnter('center')}
-                onMouseLeave={onMouseLeave('center')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(startX)}
-                width={byteOffsetToHexViewLine(endX) - byteOffsetToHexViewLine(startX) + 2}
-                color={props.color}></HighlightSegment>);
-
-            // right segment
-            segments.push(<HighlightSegment
-                key="right"
-                style={{
-                    borderTop: 'none',
-                    borderLeft: 'none',
+                    ...highlightStyle({
+                        top: startY,
+                        bottom: startY,
+                        left: adapter.mapByteToCharOffset(startX),
+                        width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
+                        color: color,
+                        hover: showActive()
+                    }),
                     borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter('right')}
-                onMouseLeave={onMouseLeave('right')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(endX) + 2}
-                width={byteOffsetToHexViewLine(15) - byteOffsetToHexViewLine(endX)}
-                color={props.color}></HighlightSegment>);
-
-            // left segment
-            segments.push(<HighlightSegment
-                key="left"
+                onMouseEnter={onMouseEnter('top')}
+                onMouseLeave={onMouseLeave('top')}></div>
+            <div
                 style={{
-                    borderBottom: 'none',
-                    borderRight: 'none',
+                    ...highlightStyle({
+                        top: endY,
+                        bottom: endY,
+                        left: adapter.mapByteToCharOffset(0),
+                        width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
+                        color: color,
+                        hover: showActive()
+                    }),
                     borderLeft: 'none'
                 }}
-                onMouseEnter={onMouseEnter('left')}
-                onMouseLeave={onMouseLeave('left')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(0)}
-                width={byteOffsetToHexViewLine(startX)}
-                color={props.color}></HighlightSegment>);
-        } else { // needs vertical fill
-            // center segment
-            segments.push(<HighlightSegment
-                key="center"
+                onMouseEnter={onMouseEnter('top')}
+                onMouseLeave={onMouseLeave('top')}></div>
+        </div>;
+    } else {
+        return <div>
+            <div
                 style={{
-                    border: 'none'
+                    ...highlightStyle({
+                        top: startY,
+                        bottom: startY,
+                        left: adapter.mapByteToCharOffset(startX),
+                        width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
+                        color: color,
+                        hover: showActive()
+                    }),
+                    borderBottom: 'none',
+                    borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter('center')}
-                onMouseLeave={onMouseLeave('center')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(0)}
-                width={byteOffsetToHexViewLine(15) + 2}
-                color={props.color}></HighlightSegment>);
-
-            // right segment
-            segments.push(<HighlightSegment
-                key="right"
+                onMouseEnter={onMouseEnter('top')}
+                onMouseLeave={onMouseLeave('top')}></div>
+            <div
                 style={{
+                    ...highlightStyle({
+                        top: startY + 1,
+                        bottom: endY - 1,
+                        left: adapter.mapByteToCharOffset(0),
+                        width: adapter.mapByteToCharOffset(15) + adapter.byteSize,
+                        color: color,
+                        hover: showActive()
+                    }),
                     borderTop: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
-                    background: 'none'
+                    borderBottom: 'none',
+                }}
+                onMouseEnter={onMouseEnter('center')}
+                onMouseLeave={onMouseLeave('center')}></div>
+
+            <div
+                style={{
+                    ...highlightStyle({
+                        top: endY - 1,
+                        bottom: endY - 1,
+                        left: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
+                        width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(endX),
+                        color: color,
+                        hover: showActive()
+                    }),
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    backgroundColor: 'none'
                 }}
                 onMouseEnter={onMouseEnter('right')}
-                onMouseLeave={onMouseLeave('right')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(endX) + 2}
-                width={byteOffsetToHexViewLine(15) - byteOffsetToHexViewLine(endX)}
-                color={props.color}></HighlightSegment>);
-
-            // left segment
-            segments.push(<HighlightSegment
-                key="left"
+                onMouseLeave={onMouseLeave('right')}></div>
+            <div
                 style={{
+                    ...highlightStyle({
+                        top: startY + 1,
+                        bottom: startY + 1,
+                        left: adapter.mapByteToCharOffset(0),
+                        width: adapter.mapByteToCharOffset(startX),
+                        color: color,
+                        hover: showActive()
+                    }),
                     borderBottom: 'none',
                     borderRight: 'none',
                     borderLeft: 'none',
-                    background: 'none'
+                    backgroundColor: 'none'
                 }}
                 onMouseEnter={onMouseEnter('left')}
-                onMouseLeave={onMouseLeave('left')}
-                top={startY + 1}
-                bottom={endY - 1}
-                left={byteOffsetToHexViewLine(0)}
-                width={byteOffsetToHexViewLine(startX)}
-                color={props.color}></HighlightSegment>);
-        }
-    
-        
-        
-        // Last line
-        segments.push(<HighlightSegment
-            key="last"
-            style={{
-                borderTop: 'none',
-                borderLeft: 'none'
-            }}
-            onMouseEnter={onMouseEnter('bottom')}
-            onMouseLeave={onMouseLeave('bottom')}
-            top={endY}
-            bottom={endY}
-            left={byteOffsetToHexViewLine(0)}
-            width={byteOffsetToHexViewLine(endX) + 2}
-            color={props.color}></HighlightSegment>);
+                onMouseLeave={onMouseLeave('left')}></div>
+            <div
+                style={{
+                    ...highlightStyle({
+                        top: endY,
+                        bottom: endY,
+                        left: adapter.mapByteToCharOffset(0),
+                        width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
+                        color: color,
+                        hover: showActive()
+                    }),
+                    borderTop: 'none',
+                    borderLeft: 'none'
+                }}
+                onMouseEnter={onMouseEnter('bottom')}
+                onMouseLeave={onMouseLeave('bottom')}></div>
+        </div>;
     }
-    
-
-    return <div className={hover !== 'none' || props.isActive ? 'hover' : ''}>
-        {segments}
-        {/* <HighlightSegment
-                top={startY}
-                bottom={startY}
-                left={byteOffsetToHexViewLine(startX)}
-                width={byteOffsetToHexViewLine(15 - startX + 1) - 1}
-                color={props.color}>
-        </HighlightSegment>
-        <HighlightSegment
-                top={endY}
-                bottom={endY}
-                left={byteOffsetToHexViewLine(0)}
-                width={byteOffsetToHexViewLine(endX + 1) - 1}
-                color={props.color}>
-        </HighlightSegment> */}
-    </div>;
 }
 
-/**
- * Converts a byte offset to a position on the hexview line (in characters)
- */
-function byteOffsetToHexViewLine(offset: number) {
-    return offset * 3 + Math.floor(offset / 4) + Math.floor(offset / 8);
+export interface HighlightAdapter {
+    /**
+     * Maps a line offset in bytes into an offset in printable character width.
+     */
+    mapByteToCharOffset: (byte: number) => number;
+
+    /**
+     * width (in printable characters) occupied by one byte.
+     */
+    byteSize: number;
 }
 
 
-export function HexViewHighlights(props: { selection: { start: number; end: number; isActive: boolean;}}) {
+export interface HexViewHighlightsProps {
+    selection: {
+        start: number;
+        end: number;
+        isActive: boolean;
+    };
+    adapter: HighlightAdapter;
+    offset: number;
+}
+
+export function HexViewHighlights(props: HexViewHighlightsProps) {
+
+    const { state } = React.useContext(HexViewContext);
 
     return <div style={{
         position: 'relative'
     }} >
-        <Highlight color="255, 176, 0" start={100} end={143}></Highlight>
-        <Highlight color="255, 0, 0" start={props.selection.start} end={props.selection.end} isActive={props.selection.isActive}></Highlight>
+        {state.highlights.filter(h => h.start >= props.offset && h.end <= props.offset + CHUNK_SIZE).map((h, id) =>
+            <Highlight key={id} 
+                    id={id} 
+                    isActive={id === state.hoveredHighlight} 
+                    adapter={props.adapter} 
+                    color={h.color} 
+                    start={h.start - props.offset} 
+                    end={h.end - props.offset}></Highlight>
+        )}
+        <Highlight id={-1} 
+                adapter={props.adapter} 
+                color="255, 0, 0" 
+                start={props.selection.start} 
+                end={props.selection.end} 
+                isActive={props.selection.isActive || state.hoveredHighlight === -1}></Highlight>
     </div>
 }

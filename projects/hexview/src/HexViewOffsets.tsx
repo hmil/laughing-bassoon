@@ -1,4 +1,8 @@
 import * as React from 'react';
+import { HexViewContext } from './Context';
+import { setSelection } from './HexViewActions';
+
+const lineHeight = 15;
 
 function hexViewOffset(props: { offset: number, addressBits: number }) {
     const addressSize = props.addressBits / 4;
@@ -10,19 +14,73 @@ function hexViewOffset(props: { offset: number, addressBits: number }) {
 export function HexViewOffsets(props: { from: number, length: number }) {
     const numberOfLines = Math.ceil(props.length / 16);
     const startOffset = Math.floor(props.from / 16);
+
+    const [isDragging, setIsDragging] = React.useState(false);
+    const containerRef = React.createRef<HTMLDivElement>();
+    const {state, dispatch} = React.useContext(HexViewContext);
+
+    function startSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        if (evt.button !== 0) return;
+        evt.preventDefault();
+        const currentRef = containerRef.current;
+        if (currentRef == null) {
+            return;
+        }
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+        dispatch(setSelection({
+            anchor: offset,
+            drag: offset + 15
+        }));
+        setIsDragging(true);
+    }
+
+    function moveSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        evt.preventDefault();
+        const currentRef = containerRef.current;
+        if (currentRef == null) {
+            return;
+        }
+        if (!isDragging) {
+            return;
+        }
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+
+        const anchor = (state.selection.anchor <= offset && state.selection.anchor % 16 !== 0) ? state.selection.anchor + 1 : 
+                    (state.selection.anchor > offset && state.selection.anchor % 16 === 0) ? state.selection.anchor - 1 :
+                    state.selection.anchor;
+        const drag = state.selection.anchor <= offset ? offset + 15 : offset;
+
+        dispatch(setSelection({ anchor, drag }));
+    }
+
+    function stopSelection() {
+        setIsDragging(false);
+    }
+
     return (
-        <div className="offset" style={{
-            paddingLeft: '4ch',
-            paddingRight: '0.5ch',
-            whiteSpace: 'pre',
-            color: '#aaa'
-        }}>
+        <div    className="offset" 
+                ref={containerRef}
+                onMouseDown={startSelection}
+                onMouseMove={moveSelection}
+                onMouseUp={stopSelection}
+                style={{
+                    paddingLeft: '4ch',
+                    paddingRight: '0.5ch',
+                    whiteSpace: 'pre',
+                    color: '#aaa'
+                }}>
             {
                 new Array(numberOfLines)
                 .fill(0)
-                .map((_, i) => hexViewOffset({ addressBits: 64, offset: startOffset + i }))
+                .map((_, i) => hexViewOffset({ addressBits: 32, offset: startOffset + i }))
                 .join('\n')
             }
         </div>
     );
+}
+
+function mapCoordinatesToOffset(_x: number, y: number) {
+    const line = Math.floor(y / lineHeight); 
+
+    return line * 16;
 }
