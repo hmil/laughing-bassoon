@@ -17,7 +17,7 @@ export function HexViewOffsets(props: { from: number, length: number }) {
 
     const [isDragging, setIsDragging] = React.useState(false);
     const containerRef = React.createRef<HTMLDivElement>();
-    const {state, dispatch} = React.useContext(HexViewContext);
+    const {state, dispatch, getCurrentScroll} = React.useContext(HexViewContext);
 
     function startSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
         if (evt.button !== 0) return;
@@ -26,7 +26,7 @@ export function HexViewOffsets(props: { from: number, length: number }) {
         if (currentRef == null) {
             return;
         }
-        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.from;
         dispatch(setSelection({
             anchor: offset,
             drag: offset + 15
@@ -43,7 +43,7 @@ export function HexViewOffsets(props: { from: number, length: number }) {
         if (!isDragging) {
             return;
         }
-        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.from;
 
         const anchor = (state.selection.anchor <= offset && state.selection.anchor % 16 !== 0) ? state.selection.anchor + 1 : 
                     (state.selection.anchor > offset && state.selection.anchor % 16 === 0) ? state.selection.anchor - 1 :

@@ -243,11 +243,14 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
                     start={h.start - props.offset} 
                     end={h.end - props.offset}></Highlight>
         )}
-        <Highlight id={-1} 
+        { props.selection.start >= props.offset && props.selection.end <= props.offset + CHUNK_SIZE ? 
+            <Highlight id={-1} 
                 adapter={props.adapter} 
                 color="255, 0, 0" 
-                start={props.selection.start} 
-                end={props.selection.end} 
+                start={props.selection.start - props.offset} 
+                end={props.selection.end - props.offset} 
                 isActive={props.selection.isActive || state.hoveredHighlight === -1}></Highlight>
+            : undefined
+        }
     </div>
 }

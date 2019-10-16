@@ -41,14 +41,15 @@ export class App extends React.Component<{}, AppState> {
                 color: '#ccc'
             }}>
                 <Toolbar />
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    height: '100%'
-                }}>
-                    <SemanticViewer></SemanticViewer>
-                    <HexView chunks={this.computeChunks()} onRequestChunks={activeChunks => this.setState({ activeChunks })} />
-                </div>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexGrow: 1,
+                        height: '300px'
+                    }}>
+                        <SemanticViewer></SemanticViewer>
+                        <HexView chunks={this.computeChunks()} onRequestChunks={activeChunks => this.setState({ activeChunks })} />
+                    </div>
             </div>
         )
     }

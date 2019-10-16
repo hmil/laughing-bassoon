@@ -23,7 +23,7 @@ export function HexView(props: HexViewProps) {
     let debounceRequests: number | null;
 
     let dom = {
-        screen: null as HTMLDivElement | null,
+        screen: React.useRef<HTMLDivElement>(null),
         paper: null as HTMLDivElement | null,
     };
 
@@ -38,18 +38,18 @@ export function HexView(props: HexViewProps) {
         }
         const nextFirstChunk = sortedChunks[0].chunkNr;
         if (firstChunk != nextFirstChunk) {
-            if (dom.screen != null && scrollPosition === dom.screen.scrollTop) {
+            if (dom.screen.current != null && scrollPosition === dom.screen.current.scrollTop) {
                 // Some browsers update the scroll automatically to accomodate infinite scroll experiences (Chrome)
                 // Some don't and we have to manually update (Firefox)
                 const offset = nextFirstChunk - firstChunk;
-                dom.screen.scrollTo(dom.screen.scrollWidth, scrollPosition - offset * SCROLL_OFFSET);
+                dom.screen.current.scrollTo(dom.screen.current.scrollWidth, scrollPosition - offset * SCROLL_OFFSET);
             }
             setFirstChunk(nextFirstChunk);
         }
     })
 
     function onScroll() {
-        const screen = dom.screen;
+        const screen = dom.screen.current;
         const paper = dom.paper;
         if (screen != null && paper != null) {
             // Whenever we get "too close" to an edge, request a different set of data.
@@ -86,12 +86,17 @@ export function HexView(props: HexViewProps) {
         return <HexChunk key={chunk.chunkNr} offset={offset} data={chunk.data} />;
     }
 
+    function getCurrentScroll() {
+        return dom.screen.current ? dom.screen.current.scrollTop : 0;
+    }
+
     return (
-        <HexViewContext.Provider value={{state, dispatch}}>
-            <div    style={{
+        <HexViewContext.Provider value={{state, dispatch, getCurrentScroll}}>
+            <div
+                style={{
                 // The purpose of this div is to hide the native scroll bar
                 overflow: 'hidden',
-                cursor: 'default'
+                cursor: 'default',
             }}>
                 <div    style={{
                             ...props.style,
@@ -104,7 +109,7 @@ export function HexView(props: HexViewProps) {
                             fontSize: '13px',
                             lineHeight: '15px'
                         }}
-                        ref={el => dom.screen = el}
+                        ref={dom.screen}
                         onScroll={onScroll}>
                     <div    style={{
                                 fontFamily: 'monospace',

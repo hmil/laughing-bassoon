@@ -35,7 +35,7 @@ export interface HexViewAsciiProps {
 export function HexViewAscii(props: HexViewAsciiProps) {
     const numberOfLines = Math.ceil(props.data.length / 16);
 
-    const { state, dispatch } = React.useContext(HexViewContext);
+    const { state, dispatch, getCurrentScroll } = React.useContext(HexViewContext);
 
     const [isDragging, setIsDragging] = React.useState(false);
     const containerRef = React.createRef<HTMLDivElement>();
@@ -47,7 +47,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
         if (currentRef == null) {
             return;
         }
-        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.offset;
         dispatch(setSelection({
             anchor: offset,
             drag: offset
@@ -64,7 +64,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
         if (!isDragging) {
             return;
         }
-        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop);
+        const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.offset;
 
         dispatch(setSelection({
             anchor: state.selection.anchor,

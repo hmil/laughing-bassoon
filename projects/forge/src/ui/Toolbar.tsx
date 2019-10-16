@@ -6,7 +6,7 @@ export function Toolbar() {
         style={{
             backgroundColor: '#212121',
             padding: '5px',
-            height: '40px'
+            height: '30px'
         }}>
         <button type="button">
             Import
