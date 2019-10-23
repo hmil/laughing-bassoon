@@ -9,6 +9,7 @@ export const ContainerField = t.intersection([
     }),
     t.partial({
         ref: t.string,
+        size: t.union([t.number, t.string])
     }),
     Container
 ]);

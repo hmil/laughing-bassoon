@@ -5,7 +5,7 @@ class HighlghtColorState {
     h: number = 0;
 
     newColor(): string {
-        this.h = this.h + 0.08;
+        this.h = this.h + 0.05;
         if (this.h >= 1) {
             this.h -= 1;
         }

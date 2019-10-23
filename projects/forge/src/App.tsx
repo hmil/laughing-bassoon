@@ -7,7 +7,7 @@ import { appInitialState, appReducer } from './state/AppState';
 import { loadFile, requestChunks, loadParseTree } from './state/AppActions';
 import { loadSchema } from './library/loader';
 import { ParserDefinition } from './parser/model';
-import { Parser } from './parser/Parser';
+import { Parser2 } from './parser/Parser2';
 
 
 
@@ -21,7 +21,7 @@ export function App() {
 
         // Load some file
         var xhr = new XMLHttpRequest();
-        xhr.open('get', 'assets/archive.tar.gz', true);
+        xhr.open('get', 'assets/archive.tar', true);
         xhr.responseType = 'arraybuffer'
         xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -35,21 +35,22 @@ export function App() {
         xhr.send();
 
         // Load a parser
-        loadSchema('assets/gzip.yml')
+        loadSchema('assets/tar.yml')
             .then(s => {
                 schema = s;
                 parseFile();
             })
+            .catch(e => console.error(e));
 
         function parseFile() {
             if (data == null || schema == null) {
                 return;
             }
-            const parser = new Parser();
-            const tree = parser.parse(schema, data);
+            const parser = new Parser2(schema, data);
+            const tree = parser.parse();
             dispatch(loadParseTree(tree));
         }
-    }, 
+    },
     // This tells react to run the effect only once:
     []);
 
@@ -74,7 +75,7 @@ export function App() {
                 }}>
                     <SemanticViewer></SemanticViewer>
                     { state.abt != null
-                        ? <HexView chunks={computeChunks()} abt={state.abt} onRequestChunks={activeChunks => dispatch(requestChunks(activeChunks))} />
+                        ? <HexView nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0} chunks={computeChunks()} abt={state.abt} onRequestChunks={activeChunks => dispatch(requestChunks(activeChunks))} />
                         : 'loading...'
                     }
                 </div>

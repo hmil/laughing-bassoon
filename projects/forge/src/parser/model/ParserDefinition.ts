@@ -1,6 +1,7 @@
 import * as t from 'io-ts';
 
 import { ElementArray } from './core/ElementArray';
+import { Codec } from './core/Codec';
 
 const Endianness = t.union([
     t.literal('little'),
@@ -17,6 +18,12 @@ export const ParserDefinition = t.intersection([
     }),
     t.partial({
         comments: t.string,
+        codecs: t.array(t.intersection([
+            Codec,
+            t.type({
+                name: t.string
+            })
+        ]))
     })
 ]);
 export type ParserDefinition = t.TypeOf<typeof ParserDefinition>;

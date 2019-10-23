@@ -40,6 +40,28 @@ content:
                 ref: FCOMMENT
                 name: FCOMMENT
       - type: fixed
+        name: timestamp
+        ref: MTIME
+        size: 32
+      - type: fixed
+        name: extra flags
+        ref: XFL
+        size: 8
+        #             "content": [
+        #                 {
+        #                     "type": "if",
+        #                     "cond": "$CM == 8",
+        #                     "then": [{
+        #                         "type": "enum",
+        #                         "target": "$XFL",
+        #                         "values": [
+        #                             { "value": [2], "name": "maximum compression", "description": "compressor used maximum compression, slowest algorithm" },
+        #                             { "value": [4], "name": "minimum compression", "description": "compressor used fastest algorithm" }
+        #                         ]
+        #                     }]
+        #                 }
+        #             ]
+      - type: fixed
         name: "Operating system"
         ref: "OS"
         size: 8
@@ -52,8 +74,7 @@ content:
             size: 16
           - type: fixed
             name: "extra field"
-            size: 8
-            # size: "$XLEN"
+            size: "XLEN"
       - type: if
         cond: "$FLG.FNAME"
         # then:

@@ -5,6 +5,7 @@
         "noUnusedParameters": true,
         "noImplicitAny": true,
         "importHelpers": true,
+        "downlevelIteration": true,
         "target": "es2015",
         "module": "es6",
         "jsx": "react",

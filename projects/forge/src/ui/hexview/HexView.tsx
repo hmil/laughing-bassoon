@@ -13,6 +13,8 @@ interface HexViewProps {
     onRequestChunks: (chunks: number[]) => void;
     style?: React.CSSProperties;
     abt: AbtRoot;
+    // Total number of chunks
+    nChunks: number;
 }
 
 const FETCH_THRESHOLD = 500;
@@ -58,7 +60,7 @@ export function HexView(props: HexViewProps) {
         const paper = dom.paper;
         if (screen != null && paper != null) {
             // Whenever we get "too close" to an edge, request a different set of data.
-            if (paper.clientHeight - screen.scrollTop - screen.clientHeight < FETCH_THRESHOLD) {
+            if (paper.clientHeight - screen.scrollTop - screen.clientHeight < FETCH_THRESHOLD && firstChunk + sortedChunks.length < props.nChunks) {
                 if (debounceRequests != null) {
                     cancelAnimationFrame(debounceRequests);
                 }

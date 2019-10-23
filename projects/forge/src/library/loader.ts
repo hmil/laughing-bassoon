@@ -14,7 +14,7 @@ export function loadSchema(src: string): Promise<ParserDefinition> {
                 if (xhr.status === 200) {
                     const json = yaml.safeLoad(xhr.response, {
                         filename: src,
-                        schema: yaml.JSON_SCHEMA
+                        schema: yaml.DEFAULT_FULL_SCHEMA
                     });
                     const parsed = ParserDefinition.decode(json);
                     pipe(

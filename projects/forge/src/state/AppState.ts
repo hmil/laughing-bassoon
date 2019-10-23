@@ -1,5 +1,5 @@
 import * as actions from './AppActions';
-import { AbtRoot } from '../abt/Abt';
+import { AbtRoot, AbtNode } from '../abt/Abt';
 import { SemanticViewerState, semanticViewerDefaultState } from './SemanticViewerState';
 import { SemanticViewer } from '../ui/SemanticViewer';
 
@@ -60,9 +60,25 @@ export function appReducer(state: AppState, action: HexViewAction): AppState {
             }
             case 'selectNode':
                 // TODO: If node is not visible in tree, then expand tree to reveal node
+                if (state.abt != null && action.data.id != null) {
+                    console.log(dumbFindNode(state.abt, action.data.id));
+                }
                 return {
                     ...state,
                     selectedNode: action.data.id
                 };
         }
+}
+
+function dumbFindNode(tree: AbtRoot, id: number) {
+    if (tree.id == id) {
+        return tree;
+    }
+    function rec(node: AbtNode): AbtNode | null {
+        if (node.id === id) {
+            return node;
+        }
+        return (node.children || []).map(n => rec(n)).find(n => n != null) || null;
+    }
+    return (tree.children).map(n => rec(n)).find(n => n != null) || null;
 }

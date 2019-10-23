@@ -82,7 +82,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
                     padding: '0 1ch',
                     borderLeft: '1px #eee solid',
                     whiteSpace: 'pre',
-                    cursor: 'text'
+                    cursor: 'default'
                 }}>
             <div    ref={containerRef}
                     onMouseDown={startSelection}
@@ -93,7 +93,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
                     selection={{
                         isActive: isDragging,
                         start: Math.min(state.selection.anchor, state.selection.drag), 
-                        end: Math.max(state.selection.anchor, state.selection.drag)
+                        end: Math.max(state.selection.anchor, state.selection.drag) + 1
                     }}
                     
                     adapter={highlightAdapter}

@@ -1,0 +1,93 @@
+type: "application/x-tar"
+endian: "little"
+wordlength: 32
+comments: "Basic tar format, https://www.gnu.org/software/tar/manual/html_node/Standard.html"
+codecs:
+  - name: octal
+    type: number
+    decode: "parseInt(str(value), 8)"
+    encode: "parseInt(str(value), 10).toString(8)"
+  - name: cstring
+    type: string
+    decode: "str(value)"
+    encode: "'todo'"
+content:
+  - type: container
+    name: entry
+    content:
+    - type: container
+      name: header
+      size: 512
+      content:
+      - type: fixed
+        name: name
+        # TODO: make it easier to work with byte sizes
+        size: 100
+        value: cstring
+      - type: fixed
+        name: mode
+        ref: MODE
+        size: 8
+        value: octal
+      - type: fixed
+        name: uid
+        size: 8
+        value: cstring
+      - type: fixed
+        name: gid
+        size: 8
+        value: cstring
+      - type: fixed
+        name: size
+        ref: SIZE
+        size: 12
+        value: octal
+      - type: fixed
+        name: mtime
+        size: 12
+        value: octal
+      - type: fixed
+        name: chksum
+        size: 8
+        value: octal
+      - type: fixed
+        name: typeflag
+        size: 1
+      - type: fixed
+        name: linkname
+        size: 100
+        value: cstring
+      - type: fixed
+        name: magic
+        size: 6
+        value: cstring
+      - type: fixed
+        name: version
+        size: 2
+        value: octal
+      - type: fixed
+        name: uname
+        size: 32
+        value: cstring
+      - type: fixed
+        name: gname
+        size: 32
+        value: cstring
+      - type: fixed
+        name: devmajor
+        size: 8
+        value: cstring
+      - type: fixed
+        name: devminor
+        size: 8
+        value: cstring
+      - type: fixed
+        name: prefix
+        size: 131
+        value: cstring
+    - type: fixed
+      name: content
+      size: "SIZE"
+    - type: fixed
+      name: padding
+      size: "SIZE % 256"

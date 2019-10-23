@@ -42,10 +42,15 @@ interface HighlightProps {
 
 function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) {
 
+    if (start >= end) {
+        // Can't highlight something which has no width
+        return null;
+    }
+
     const startX = start % 16;
-    const endX = end % 16;
+    const endX = (end - 1) % 16;
     const startY = Math.floor(start / 16);
-    const endY = Math.floor(end / 16);
+    const endY = Math.floor((end - 1) / 16);
 
     const appContext = React.useContext(AppContext);
     function onMouseEnter() {
@@ -235,7 +240,7 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
                     start={h.start - props.offset} 
                     end={h.end - props.offset}></Highlight>
         )}
-        { props.selection.start >= props.offset && props.selection.end <= props.offset + CHUNK_SIZE ? 
+        {/* { props.selection.start >= props.offset && props.selection.end <= props.offset + CHUNK_SIZE ? 
             <Highlight id={-1} 
                 adapter={props.adapter} 
                 color="255, 0, 0" 
@@ -243,6 +248,6 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
                 end={props.selection.end - props.offset} 
                 isActive={props.selection.isActive || appContext.state.hoveredNode === -1}></Highlight>
             : undefined
-        }
+        } */}
     </div>
 }

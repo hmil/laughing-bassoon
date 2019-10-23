@@ -100,7 +100,7 @@ export function HexViewBytes(props: HexViewBytesProps) {
                     selection={{
                         isActive: localState.isDragging,
                         start: Math.min(state.selection.anchor, state.selection.drag), 
-                        end: Math.max(state.selection.anchor, state.selection.drag)
+                        end: Math.max(state.selection.anchor, state.selection.drag) + 1
                     }}
                     adapter={highlightAdapter}
                     ></HexViewHighlights>

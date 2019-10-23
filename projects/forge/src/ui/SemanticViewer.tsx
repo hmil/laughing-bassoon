@@ -66,7 +66,11 @@ export function SemanticViewer() {
         borderRadius: '3px'
     }}>
         { state.abt != null 
-            ? <div>
+            ? <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%'
+            }}>
                 <h2 style={{
                     padding: '10px 12px',
                     margin: 0,    
@@ -76,6 +80,8 @@ export function SemanticViewer() {
                 <div style={{
                     borderTop: '1px #1a1a1a solid',
                     boxShadow: 'inset 0px 0.5px 1px 0px #ffffff17',
+                    flexShrink: 1,
+                    overflow: 'auto'
                 }}>
                     { renderChildren(state.abt, 0).elements }
                 </div>
