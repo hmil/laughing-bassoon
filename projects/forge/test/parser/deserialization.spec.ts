@@ -1,7 +1,7 @@
-import { pipe } from 'fp-ts/lib/pipeable';
-import { Parser } from '../../src/parser/model';
+import { pipe } from 'fp-ts/lib/pipeable';
+import { ParserDefinition } from '../../src/parser/model';
 import { fold } from 'fp-ts/lib/Either';
-import { reporter } from 'io-ts-reporters';
+import { reporter } from 'io-ts-reporters';
 import { typedExpect } from '../test-utils';
 
 declare function require(path: string): { [k: string]: unknown };
@@ -9,7 +9,7 @@ declare function require(path: string): { [k: string]: unknown };
 describe('deserialization', () => {
     it('deserializes basic fields', () => {
         const rawJSON = require('../fixtures/simple-fields.json');
-        const result = Parser.decode(rawJSON);
+        const result = ParserDefinition.decode(rawJSON);
         pipe(
             result,
             fold(
@@ -38,7 +38,7 @@ describe('deserialization', () => {
     });
     it('deserializes nested fields', () => {
         const rawJSON = require('../fixtures/simple-fields-nested.json');
-        const result = Parser.decode(rawJSON);
+        const result = ParserDefinition.decode(rawJSON);
         pipe(
             result,
             fold(

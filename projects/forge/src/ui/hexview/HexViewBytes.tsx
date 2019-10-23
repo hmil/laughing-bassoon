@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { HexViewHighlights, HighlightAdapter } from './HexViewHighlights';
+import { HexViewHighlights, HighlightAdapter } from './highlight/HexViewHighlights';
 import { useState } from 'react';
 import { HexViewContext } from './Context';
 import { setSelection } from './HexViewActions';
@@ -38,7 +38,7 @@ const highlightAdapter: HighlightAdapter = {
 export function HexViewBytes(props: HexViewBytesProps) {
     const numberOfLines = Math.ceil(props.data.length / 16);
 
-    const [isDragging, setIsDragging] = useState(false);
+    const [localState, setLocalState] = useState({isDragging: false, dragStart: 0 });
     const containerRef = React.useRef<HTMLDivElement>(null);
     const {state, dispatch, getCurrentScroll} = React.useContext(HexViewContext);
 
@@ -50,12 +50,14 @@ export function HexViewBytes(props: HexViewBytesProps) {
             return;
         }
         const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.offset;
-        console.log(offset);
-        dispatch(setSelection({
-            anchor: offset,
-            drag: offset
-        }));
-        setIsDragging(true);
+        // dispatch(setSelection({
+        //     anchor: offset,
+        //     drag: offset
+        // }));
+        setLocalState({
+            isDragging: true,
+            dragStart: offset
+        });
     }
 
     function moveSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
@@ -64,19 +66,22 @@ export function HexViewBytes(props: HexViewBytesProps) {
         if (currentRef == null) {
             return;
         }
-        if (!isDragging) {
+        if (!localState.isDragging) {
             return;
         }
         const offset = mapCoordinatesToOffset(evt.clientX - currentRef.offsetLeft, evt.clientY - currentRef.offsetTop + getCurrentScroll()) + props.offset;
 
         dispatch(setSelection({
-            anchor: state.selection.anchor,
+            anchor: localState.dragStart,
             drag: offset
         }));
     }
 
     function stopSelection() {
-        setIsDragging(false);
+        setLocalState({
+            isDragging: false,
+            dragStart: 0
+        });
     }
 
 
@@ -93,15 +98,16 @@ export function HexViewBytes(props: HexViewBytesProps) {
                 <HexViewHighlights
                     offset={props.offset}
                     selection={{
-                        isActive: isDragging,
+                        isActive: localState.isDragging,
                         start: Math.min(state.selection.anchor, state.selection.drag), 
                         end: Math.max(state.selection.anchor, state.selection.drag)
                     }}
                     adapter={highlightAdapter}
                     ></HexViewHighlights>
-                {new Array(numberOfLines).fill(0)
-                    .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
-                    .join('\n')
+                {
+                    new Array(numberOfLines).fill(0)
+                        .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
+                        .join('\n')
                 }
             </div>
         </div>

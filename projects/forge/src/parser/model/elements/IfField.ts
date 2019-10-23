@@ -2,20 +2,20 @@ import * as t from 'io-ts';
 import { allElements } from '.';
 import { ElementArray } from '../core/ElementArray';
 
-interface Then {
+export interface Then {
     then?: ElementArray;
 }
 const Then: t.Type<Then> = t.partial({
     then: ElementArray
 });
-interface Else {
+export interface Else {
     else?: ElementArray;
 }
 const Else: t.Type<Else> = t.partial({
     else: ElementArray
 });
 
-export const If = t.intersection([
+export const IfField = t.intersection([
     t.type({
         type: t.literal('if'),
         cond: t.string,
@@ -29,8 +29,8 @@ export const If = t.intersection([
 
 declare module "." {
     interface AllElements {
-        If: If;
+        IfField: IfField;
     }
 }
-export type If = t.TypeOf<typeof If>;
-allElements.push(If);
+export type IfField = t.TypeOf<typeof IfField>;
+allElements.push(IfField);

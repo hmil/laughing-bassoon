@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { HexViewHighlights, HighlightAdapter } from './HexViewHighlights';
+import { HexViewHighlights, HighlightAdapter } from './highlight/HexViewHighlights';
 import { HexViewContext } from './Context';
 import { setSelection } from './HexViewActions';
 

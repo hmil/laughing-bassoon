@@ -4,12 +4,15 @@ import { Chunk, compareChunks } from './Chunk';
 import { hexViewReducer, hexViewInitialState } from './HexViewState';
 import { HexViewContext } from './Context';
 import { CHUNK_SIZE } from './Config';
+import { AbtRoot } from '../../abt/Abt';
+import { abtToHighlights } from './highlight/abtToHighlights';
 
 
 interface HexViewProps {
     chunks: Chunk[];
     onRequestChunks: (chunks: number[]) => void;
-    style?: React.CSSProperties; 
+    style?: React.CSSProperties;
+    abt: AbtRoot;
 }
 
 const FETCH_THRESHOLD = 500;
@@ -31,6 +34,8 @@ export function HexView(props: HexViewProps) {
     const [scrollPosition, setScrollPosition] = React.useState(0);
 
     const [state, dispatch] = React.useReducer(hexViewReducer, hexViewInitialState);
+
+    const highlights = abtToHighlights(props.abt);
 
     React.useEffect(() => {
         if (sortedChunks.length < 1) {
@@ -91,7 +96,7 @@ export function HexView(props: HexViewProps) {
     }
 
     return (
-        <HexViewContext.Provider value={{state, dispatch, getCurrentScroll}}>
+        <HexViewContext.Provider value={{highlights, state, dispatch, getCurrentScroll}}>
             <div
                 style={{
                 // The purpose of this div is to hide the native scroll bar
@@ -105,7 +110,6 @@ export function HexView(props: HexViewProps) {
                             width: '100%',
                             boxSizing: 'content-box',
                             paddingRight: '20px',
-                            backgroundColor: '#181818',
                             fontSize: '13px',
                             lineHeight: '15px'
                         }}
@@ -124,3 +128,4 @@ export function HexView(props: HexViewProps) {
         </HexViewContext.Provider>
     );
 }
+

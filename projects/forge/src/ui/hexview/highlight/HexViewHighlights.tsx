@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { useState } from 'react';
-import { HexViewContext } from './Context';
-import { hoverHighlight } from './HexViewActions';
-import { CHUNK_SIZE } from './Config';
+import { HexViewContext } from '../Context';
+import { CHUNK_SIZE } from '../Config';
+import { AppContext } from 'projects/forge/src/state/AppContext';
+import { hoverHighlight, selectNode } from 'projects/forge/src/state/AppActions';
 
 const lineHeight = 15;
 
@@ -21,7 +21,8 @@ function highlightStyle(props: {
         borderBottom: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
-        backgroundColor: `rgba(${props.color}, 0.1)`,
+        backgroundColor: `rgba(${props.color}, ${props.hover ? '0.35' : '0.25'})`,
+        // mixBlendMode: 'screen',
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
         top: `${props.top * lineHeight}px`,
@@ -39,8 +40,6 @@ interface HighlightProps {
     id: number;
 }
 
-type Direction = 'top' | 'left' | 'bottom' | 'right' | 'center';
-
 function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) {
 
     const startX = start % 16;
@@ -48,27 +47,19 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
     const startY = Math.floor(start / 16);
     const endY = Math.floor(end / 16);
 
-    const {state, dispatch} = React.useContext(HexViewContext);
-    const [hover, setHover] = useState<'none' | Direction>('none');
-    function onMouseEnter(direction: Direction) {
+    const appContext = React.useContext(AppContext);
+    function onMouseEnter() {
         return () => {
-            setHover(direction);
-            dispatch(hoverHighlight({id}));
+            appContext.dispatch(hoverHighlight({id}));
         };
     }
-    function onMouseLeave(direction: Direction) {
-        return () => {
-            if (hover === direction) {
-                setHover('none');
-                if (state.hoveredHighlight === id) {
-                    dispatch(hoverHighlight({ id: null }));
-                }
-            }
-        }
+
+    function onClick() {
+        appContext.dispatch(selectNode({id}));
     }
 
     function showActive() {
-        return hover !== 'none' || isActive === true;
+        return /*hover !== 'none' ||*/ isActive === true;
     }
 
     if (endY - startY === 0) { // single line
@@ -81,8 +72,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                 color: color,
                 hover: showActive()
             })}
-            onMouseEnter={onMouseEnter('top')}
-            onMouseLeave={onMouseLeave('top')}
+            onMouseEnter={onMouseEnter()}
+            onClick={onClick}
         ></div>;
 
     } else if (endY - startY === 1 && startX > endX) { // Two lines, No overlap
@@ -99,8 +90,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     }),
                     borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter('top')}
-                onMouseLeave={onMouseLeave('top')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
             <div
                 style={{
                     ...highlightStyle({
@@ -113,8 +104,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     }),
                     borderLeft: 'none'
                 }}
-                onMouseEnter={onMouseEnter('top')}
-                onMouseLeave={onMouseLeave('top')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
         </div>;
     } else {
         return <div>
@@ -131,8 +122,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     borderBottom: 'none',
                     borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter('top')}
-                onMouseLeave={onMouseLeave('top')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
             <div
                 style={{
                     ...highlightStyle({
@@ -148,8 +139,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     borderRight: 'none',
                     borderBottom: 'none',
                 }}
-                onMouseEnter={onMouseEnter('center')}
-                onMouseLeave={onMouseLeave('center')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
 
             <div
                 style={{
@@ -166,8 +157,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     borderRight: 'none',
                     backgroundColor: 'none'
                 }}
-                onMouseEnter={onMouseEnter('right')}
-                onMouseLeave={onMouseLeave('right')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
             <div
                 style={{
                     ...highlightStyle({
@@ -183,8 +174,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     borderLeft: 'none',
                     backgroundColor: 'none'
                 }}
-                onMouseEnter={onMouseEnter('left')}
-                onMouseLeave={onMouseLeave('left')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
             <div
                 style={{
                     ...highlightStyle({
@@ -198,8 +189,8 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
                     borderTop: 'none',
                     borderLeft: 'none'
                 }}
-                onMouseEnter={onMouseEnter('bottom')}
-                onMouseLeave={onMouseLeave('bottom')}></div>
+                onMouseEnter={onMouseEnter()}
+                onClick={onClick}></div>
         </div>;
     }
 }
@@ -229,15 +220,16 @@ export interface HexViewHighlightsProps {
 
 export function HexViewHighlights(props: HexViewHighlightsProps) {
 
-    const { state } = React.useContext(HexViewContext);
+    const { highlights } = React.useContext(HexViewContext);
+    const appContext = React.useContext(AppContext);
 
     return <div style={{
         position: 'relative'
     }} >
-        {state.highlights.filter(h => h.start >= props.offset && h.end <= props.offset + CHUNK_SIZE).map((h, id) =>
-            <Highlight key={id} 
-                    id={id} 
-                    isActive={id === state.hoveredHighlight} 
+        {highlights.filter(h => h.start >= props.offset && h.end <= props.offset + CHUNK_SIZE).map(h =>
+            <Highlight key={h.nodeId} 
+                    id={h.nodeId} 
+                    isActive={h.nodeId === appContext.state.hoveredNode} 
                     adapter={props.adapter} 
                     color={h.color} 
                     start={h.start - props.offset} 
@@ -249,7 +241,7 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
                 color="255, 0, 0" 
                 start={props.selection.start - props.offset} 
                 end={props.selection.end - props.offset} 
-                isActive={props.selection.isActive || state.hoveredHighlight === -1}></Highlight>
+                isActive={props.selection.isActive || appContext.state.hoveredNode === -1}></Highlight>
             : undefined
         }
     </div>

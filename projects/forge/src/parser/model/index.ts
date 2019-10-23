@@ -3,13 +3,14 @@
  * directory may cause weird type or runtime errors. 
  */
 
-export { Parser } from './Parser';
+export { ParserDefinition } from './ParserDefinition';
 
 // Parser elements
-export { ConstField } from './elements/ConstField';
+export { ConstField } from './elements/ConstField';
 export { FixedField } from './elements/FixedField';
 export { Flags } from './elements/Flags';
-export { If } from './elements/If';
+export { IfField } from './elements/IfField';
+export { ContainerField } from './elements/ContainerField';
 
 // Misc
 export { Container } from './core/Container';

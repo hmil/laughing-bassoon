@@ -1,4 +1,4 @@
-import { Highlight } from './Highlight';
+import { Highlight } from './highlight/Highlight';
 import { Selection } from './Selection';
 
 
@@ -13,4 +13,3 @@ function makeAction<Type extends string, Data>(type: Type, data: Data): BaseActi
 
 export const setSelection = (data: Selection) => makeAction('setSelection', data);
 export const addHighlight = (data: Highlight) => makeAction('addHighlight', data);
-export const hoverHighlight = (data: { id: number | null}) => makeAction('hoverHighlight', data);

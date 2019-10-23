@@ -1,0 +1,88 @@
+type: "application/gzip"
+endian: "little"
+wordlength: 32
+comments: "GZIP file format, as specified in the GZIP file format specification version 4.3 http://www.zlib.org/rfc-gzip.html"
+content:
+  - type: container
+    ref: "HEADER"
+    name: "header"
+    content:
+      - type: const
+        name: "Identification"
+        size: 16
+        ref: "ID"
+        value: [ 35615 ]
+      - type: const
+        name: "compression method"
+        ref: "CM"
+        size: 8
+        value: [ 8 ]
+      - type: fixed
+        name: "flags"
+        ref: FLG
+        size: 8
+        content:
+          - type: flags
+            values:
+              - target: "$FLG[0]"
+                ref: FTEXT
+                name: FTEXT
+              - target: "$FLG[1]"
+                ref: FHCRC
+                name: FHCRC
+              - target: "$FLG[2]"
+                ref: FEXTRA
+                name: FEXTRA
+              - target: "$FLG[3]"
+                ref: FNAME
+                name: FNAME
+              - target: "$FLG[4]"
+                ref: FCOMMENT
+                name: FCOMMENT
+      - type: fixed
+        name: "Operating system"
+        ref: "OS"
+        size: 8
+      - type: if
+        cond: "$FLG.FEXTRA"
+        then:
+          - type: fixed
+            name: "extra field size"
+            ref: "XLEN"
+            size: 16
+          - type: fixed
+            name: "extra field"
+            size: 8
+            # size: "$XLEN"
+      - type: if
+        cond: "$FLG.FNAME"
+        # then:
+          # - type: "c-string"
+          #   name: "original file name"
+  - type: if
+    cond: "$FLG.FHCRC"
+    then:
+      - type: fixed
+        name: "header CRC"
+        size: 16
+        ref: HCRC
+        # content:
+        #   - type: expr
+        #     target: HCRC
+        #     expr: "crc32($HEADER)[15..0]"
+  - type: container
+    name: body
+    # content:
+    #   - type: embed
+    #     embedType: "application/x.deflate"
+  - type: container
+    name: trailer
+    content:
+      - type: fixed
+        name: "CRC-32"
+        ref: "CRC-32"
+        size: 32
+      - type: fixed
+        name: "input size"
+        ref: ISIZE
+        size: 32
