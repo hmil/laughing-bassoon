@@ -85,6 +85,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
                     cursor: 'default'
                 }}>
             <div    ref={containerRef}
+                    style={{ position: 'relative' }}
                     onMouseDown={startSelection}
                     onMouseMove={moveSelection}
                     onMouseUp={stopSelection}>
@@ -95,14 +96,16 @@ export function HexViewAscii(props: HexViewAsciiProps) {
                         start: Math.min(state.selection.anchor, state.selection.drag), 
                         end: Math.max(state.selection.anchor, state.selection.drag) + 1
                     }}
-                    
                     adapter={highlightAdapter}
                 ></HexViewHighlights>
-                {
+                <div style={{
+                    position: 'relative',
+                    pointerEvents: 'none'
+                }}>{
                     new Array(numberOfLines).fill(0)
                         .map((_, i) => formatAsciiLine(props.data.slice(i * 16, (i + 1) * 16 )))
                         .join('\n')
-                }
+                }</div>
             </div>
         </div>
     );

@@ -92,6 +92,9 @@ export function HexViewBytes(props: HexViewBytesProps) {
                     whiteSpace: 'pre'
                 }}>
             <div    ref={containerRef}
+                    style={{
+                        position: 'relative'
+                    }}
                     onMouseDown={startSelection}
                     onMouseMove={moveSelection}
                     onMouseUp={stopSelection}>
@@ -104,11 +107,14 @@ export function HexViewBytes(props: HexViewBytesProps) {
                     }}
                     adapter={highlightAdapter}
                     ></HexViewHighlights>
-                {
+                <div style={{
+                    position: 'relative',
+                    pointerEvents: 'none'
+                }}>{
                     new Array(numberOfLines).fill(0)
-                        .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
-                        .join('\n')
-                }
+                    .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
+                    .join('\n')
+                }</div>
             </div>
         </div>
     );

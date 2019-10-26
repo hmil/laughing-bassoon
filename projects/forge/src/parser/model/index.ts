@@ -6,11 +6,12 @@
 export { ParserDefinition } from './ParserDefinition';
 
 // Parser elements
-export { ConstField } from './elements/ConstField';
 export { FixedField } from './elements/FixedField';
 export { Flags } from './elements/Flags';
 export { IfField } from './elements/IfField';
 export { ContainerField } from './elements/ContainerField';
+export { Repeat } from './elements/Repeat';
 
 // Misc
 export { Container } from './core/Container';
+export { AnyElement } from './AnyElement';

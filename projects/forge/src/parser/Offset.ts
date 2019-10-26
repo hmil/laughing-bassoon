@@ -8,8 +8,17 @@ export class Offset {
             public readonly bitOffset: number) {
     }
 
-    add(offset: number, bitOffset: number = 0): Offset {
-        const newBitOffset = this.bitOffset + bitOffset;
-        return new Offset((this.offset + offset) + ~~(newBitOffset / 8), newBitOffset % 8);
+    add(offset: Offset): Offset {
+        const newBitOffset = this.bitOffset + offset.bitOffset;
+        return new Offset((this.offset + offset.offset) + ~~(newBitOffset / 8), newBitOffset % 8);
+    }
+
+    compareTo(offset: Offset): number {
+        return this.offset < offset.offset ? -1 : this.offset > offset.offset ? 1 :
+                this.bitOffset < offset.bitOffset ? -1 : this.bitOffset > offset.bitOffset ? 1 : 0;
+    }
+
+    toString(): string {
+        return `0x${this.offset.toString(16)}${this.bitOffset !== 0 ? `(${this.bitOffset})` : ''}`;
     }
 }

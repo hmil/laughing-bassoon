@@ -1,7 +1,7 @@
 import * as t from 'io-ts';
 
 import { ElementArray } from './core/ElementArray';
-import { Codec } from './core/Codec';
+import { CodecModel } from './core/CodecModel';
 
 const Endianness = t.union([
     t.literal('little'),
@@ -19,7 +19,7 @@ export const ParserDefinition = t.intersection([
     t.partial({
         comments: t.string,
         codecs: t.array(t.intersection([
-            Codec,
+            CodecModel,
             t.type({
                 name: t.string
             })

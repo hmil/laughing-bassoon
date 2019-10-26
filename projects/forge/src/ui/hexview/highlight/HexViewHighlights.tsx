@@ -35,12 +35,13 @@ interface HighlightProps {
     start: number;
     end: number;
     color: string;
-    isActive?: boolean;
+    isActive: boolean;
+    isSelected: boolean;
     adapter: HighlightAdapter;
     id: number;
 }
 
-function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) {
+function Highlight({ start, adapter, end, color, isActive, isSelected, id}: HighlightProps) {
 
     if (start >= end) {
         // Can't highlight something which has no width
@@ -51,6 +52,10 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
     const endX = (end - 1) % 16;
     const startY = Math.floor(start / 16);
     const endY = Math.floor((end - 1) / 16);
+
+    if (isSelected) {
+        color = '255, 211, 0';
+    }
 
     const appContext = React.useContext(AppContext);
     function onMouseEnter() {
@@ -64,7 +69,7 @@ function Highlight({ start, adapter, end, color, isActive, id}: HighlightProps) 
     }
 
     function showActive() {
-        return /*hover !== 'none' ||*/ isActive === true;
+        return isSelected || isActive;
     }
 
     if (endY - startY === 0) { // single line
@@ -228,12 +233,11 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
     const { highlights } = React.useContext(HexViewContext);
     const appContext = React.useContext(AppContext);
 
-    return <div style={{
-        position: 'relative'
-    }} >
+    return <div>
         {highlights.filter(h => h.start >= props.offset && h.end <= props.offset + CHUNK_SIZE).map(h =>
             <Highlight key={h.nodeId} 
                     id={h.nodeId} 
+                    isSelected={h.nodeId === appContext.state.selectedNode}
                     isActive={h.nodeId === appContext.state.hoveredNode} 
                     adapter={props.adapter} 
                     color={h.color} 
