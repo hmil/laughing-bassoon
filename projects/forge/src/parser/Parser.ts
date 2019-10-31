@@ -67,7 +67,7 @@ export class Parser {
             const codec = this.codecLibrary.resolve(elem.value);
 
             pipe(
-                codec.decode(this.data.slice(head.offset.offset, nextOffset.offset)),
+                codec!.decode(this.data.slice(head.offset.offset, nextOffset.offset)),
                 fold(
                     err => {
                         name += ` [${err}]`;

@@ -19,6 +19,9 @@ export const Repeat = t.intersection([
     t.type({
         type: t.literal('repeat'),
     }),
+    t.partial({
+        ref: t.string
+    }),
     Until,
     Do
 ]);

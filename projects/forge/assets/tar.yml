@@ -99,8 +99,20 @@ content:
             value: cstring
         - type: fixed
           name: content
-          size: "$SIZE"
+          size: "$HEADER/SIZE"
         - type: fixed
           name: padding
-          size: "512 - $SIZE"
-        # size: "512 - ($SIZE % 512)" # TODO: variable scoping
+          size: "512 - $HEADER/SIZE % 512"
+  - type: container
+    name: end clearence
+    content:
+      - type: fixed
+        name: empty block
+        size: 512
+        constraints:
+          - type: isNull
+      - type: fixed
+        name: empty block
+        size: 512
+        constraints:
+          - type: isNull

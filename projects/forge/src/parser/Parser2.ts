@@ -8,19 +8,11 @@ import { CodecLibrary } from './codec/CodecLibrary';
 import { Expression } from './Expression';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { fold } from 'fp-ts/lib/Either';
-import { AbstractDefinition } from './AbstractDefinition';
-
-/// SCOPING WIP NOTES
-//
-// AnyElement doesn't have a `parent` property which is needed for scope resolution
-// Browsing the children of AnyElement for scoping requires knowledge of that element's structure (ie. what are the children, does it create a new scope? can I traverse?)
-// Need to augment the incoming tree with a scope tree in a pre-processing step.
-// Either use type magic to augment the type directly...
-// ...or use a mapping from Element to scope local to the parser.
-// Second solution is less black magic and probably better.
-// 
+import { createScopeTree, Scope } from './scoping';
+import { ScopeTree } from './scoping/ScopeTree';
 
 
+// TODO: move to own file
 class Thread {
 
     private static tcounter = 0;
@@ -36,10 +28,10 @@ class Thread {
     public readonly id: number = Thread.tcounter ++;
 
     constructor(
+            public readonly context: string,
             private _offset: Offset,
             private _limit: Offset,
-            public readonly instructions: AbstractDefinition[],
-            public readonly definition: AbstractDefinition,
+            public readonly instructions: AnyElement[],
             public readonly produce: (node: AbtNode) => void) {
         this.log(`Spawn`);
     }
@@ -47,12 +39,12 @@ class Thread {
     public get offset() { return this._offset }
     public get limit() { return this._limit }
 
-    fork(instructions: AbstractDefinition[], definition: AbstractDefinition, produce?: (node: AbtNode) => void): Thread {
+    fork(nextContext: string | null, instructions: AnyElement[], produce?: (node: AbtNode) => void): Thread {
         return new Thread(
+            nextContext == null ? this.context : `${this.context}/${nextContext}`,
             this._offset,
             this._limit,
             instructions,
-            definition,
             produce ? produce : this.produce
         );
     }
@@ -63,7 +55,7 @@ class Thread {
         this.isCancelled = true;
     }
 
-    step(): AbstractDefinition | undefined {
+    step(): AnyElement | undefined {
         if (this.isCancelled) {
             return undefined;
         }
@@ -125,7 +117,7 @@ class Thread {
             return;
         }
         this.errors.push(err);
-        this.notifyError(err);
+        this.notifyError(`[${this.id}] ${err}`);
     }
 
     private finalize() {
@@ -143,12 +135,15 @@ class Thread {
 export class Parser2 {
 
     private readonly codecLibrary: CodecLibrary;
+    private readonly scopeTree: ScopeTree;
     private openList: Thread[] = [];
+    private closedList: Set<(variable: number | null) => void> = new Set();
 
     constructor(
             private readonly definition: ParserDefinition,
             private readonly data: Uint8Array) {
         this.codecLibrary = createCodecLibrary(definition.codecs);
+        this.scopeTree = createScopeTree(definition);
     }
 
     private resume(thread: Thread): void {
@@ -156,7 +151,7 @@ export class Parser2 {
         this.openList.push(thread);
     }
 
-    private processFixed(elem: FixedField, def: AbstractDefinition, thread: Thread): void {
+    private processFixed(elem: FixedField, thread: Thread): void {
         thread.log(`Fixed: ${elem.name}`);
         if ('bitSize' in elem) { // TODO: handle bit size
             throw new Error('Bit sizing not yet supported');
@@ -164,7 +159,7 @@ export class Parser2 {
 
         let name = elem.name;
 
-        this.resolveExpression(thread.scope, elem.size, size => {
+        this.resolveExpression(thread.context, this.scopeTree.getScopeForNode(elem), elem.size, size => {
             if (size == null) {
                 thread.addError('Cannot resolve size');
                 thread.produce({
@@ -192,24 +187,26 @@ export class Parser2 {
             const nextOffset = thread.offset.add(new Offset(size, 0));
             const codec = this.codecLibrary.resolve(elem.value);
 
-            pipe(
-                codec.decode(this.data.slice(thread.offset.offset, nextOffset.offset)),
-                fold(
-                    err => {
-                        name += ` [${err}]`;
-                        thread.addError(err);
-                    },
-                    value => {
-                        if (elem.ref != null) {
-                            name += ` (${elem.ref})`;
-                            if (typeof value === 'number') {
-                                this.provideVariable(thread.scope, elem.ref, value);
+            if (codec != null) {
+                pipe(
+                    codec.decode(this.data.slice(thread.offset.offset, nextOffset.offset)),
+                    fold(
+                        err => {
+                            name += ` [${err}]`;
+                            thread.addError(err);
+                        },
+                        value => {
+                            if (elem.ref != null) {
+                                name += ` (${elem.ref})`;
+                                if (typeof value === 'number' && !isNaN(value)) {
+                                    this.provideVariable(thread.context, this.scopeTree.getScopeForNode(elem), elem.ref, value);
+                                }
                             }
+                            name += ` = ${value}`;
                         }
-                        name += ` = ${value}`;
-                    }
-                )
-            );
+                    )
+                );
+            }
     
             thread.produce({
                 type: 'generic',
@@ -224,29 +221,30 @@ export class Parser2 {
         });
     }
 
-    private processContainer(elem: ContainerField, def: AbstractDefinition, thread: Thread): void {
+    private processContainer(elem: ContainerField, thread: Thread): void {
         thread.log(`Container: ${elem.name}`);
 
         const id = uniqId();
         const endVariable = `system.container@${id}.end`;
         const children: AbtNode[] = [];
+        const scope = this.scopeTree.getScopeForNode(elem);
 
         if (elem.content != null) {
             const childThread = thread.fork(
+                    null,
                     elem.content,
-                    def,
                     node => children.push(node));
             childThread.onError(err => thread.addError(err));
             childThread.onFinalized(() => {
-                this.provideVariable(thread.scope, endVariable, childThread.offset.offset);
+                this.provideVariable(thread.context, scope, endVariable, childThread.offset.offset);
             });
             this.resume(childThread);
         } else {
-            this.provideVariable(thread.scope, endVariable, 0);
+            this.provideVariable(thread.context, scope, endVariable, 0);
         }
 
         if (elem.size != null) {
-            this.resolveExpression(thread.scope, elem.size, size => {
+            this.resolveExpression(thread.context, scope, elem.size, size => {
                 if (size == null) {
                     thread.addError('cannot resolve size');
                     thread.produce({
@@ -273,7 +271,7 @@ export class Parser2 {
                 this.resume(thread);
             });
         } else {
-            this.requestVariable(thread.scope, endVariable, end => {
+            this.requestVariable(thread.context, scope, endVariable, end => {
                 if (end == null) {
                     thread.addError('cannot resolve size');
                     thread.produce({
@@ -304,8 +302,10 @@ export class Parser2 {
 
     private processRepeat(elem: Repeat, thread: Thread): void {
         thread.log(`Repeat`);
-        const testThread = thread.fork(elem.until, thread.definition.clone(), () => {});
-        const loopThread = thread.fork(elem.do, thread.definition);
+        // This must be unique for each iteration, but ideally it should be sequential
+        const iterationCounter = uniqId();
+        const testThread = thread.fork('test', elem.until, () => {});
+        const loopThread = thread.fork(`${iterationCounter}`, elem.do);
 
         let aborted = false;
         loopThread.onFinalized(() => {
@@ -314,10 +314,11 @@ export class Parser2 {
             thread.moveTo(loopThread.offset);
             this.resume(thread);
         });
-        testThread.onError(() => {
+        testThread.onError(err => {
             if (aborted) {
                 throw new Error('This should not happen');
             }
+            thread.log(`resume because ${err}`);
             aborted = true;
             thread.log('Do');
             testThread.abort();
@@ -331,16 +332,16 @@ export class Parser2 {
         this.resume(testThread);
     }
 
-    private processNode(elem: AbstractDefinition<AnyElement>, head: Thread): void {
-        switch (elem.model.type) {
+    private processNode(elem: AnyElement, head: Thread): void {
+        switch (elem.type) {
             case 'fixed':
-                return this.processFixed(elem.model, elem, head);
+                return this.processFixed(elem, head);
             case 'container':
-                return this.processContainer(elem.model, head);
+                return this.processContainer(elem, head);
             // case 'if':
             //     return this.processIf(elem, head);
             case 'repeat':
-                return this.processRepeat(elem.model, head);
+                return this.processRepeat(elem, head);
             default:
                 this.resume(head);
         }
@@ -362,9 +363,7 @@ export class Parser2 {
     }
 
     private finalize() {
-        for (let value of this.closedList.values()) {
-            value.forEach(v => v(null));
-        }
+       this.closedList.forEach(v => v(null));
     }
 
     public parse(): AbtRoot {
@@ -376,21 +375,15 @@ export class Parser2 {
             children: [ ]
         };
 
-        const rootContainer: ContainerField = {
-            type: 'container',
-            name: 'root',
-            content: this.definition.content,
-            size: this.data.length
-        };
-
         const thread = new Thread(
+            'root',
             new Offset(0, 0),
             new Offset(this.data.length, 0),
-            new AbstractDefinition(rootContainer),
+            this.definition.content,
             node => root.children.push(node)
         );
         thread.onError(err => console.error(err));
-        thread.onFinalized(() => console.log('done'));
+        thread.onFinalized(err => console.log(`done${err ? ' with errors' : ''}`));
 
         this.resume(thread);
 
@@ -399,19 +392,12 @@ export class Parser2 {
         return root;
     }
 
-
-
-
-    // Variable mgt. TODO: move to some other class
-    private closedList: Map<string, Array<(variable: number | null) => void>> = new Map();
-    private variables: Map<string, number> = new Map();
-
-    private resolveExpression(scope: Scope, v: string | number, cb: (variable: number | null) => void): void {
+    private resolveExpression(context: string, scope: Scope, v: string | number, cb: (variable: number | null) => void): void {
         if (typeof v === 'number') {
             cb(v);
         } else {
             const expression = new Expression(v);
-            this.requestVariables(scope, expression.variables, vars => {
+            this.requestVariables(context, scope, expression.variables, vars => {
                 if (vars == null) {
                     cb(null);
                 } else {
@@ -421,8 +407,7 @@ export class Parser2 {
         }
     }
 
-    private requestVariables(scope: Scope, variables: string[], cb: (vars: Map<string, number> | null) => void): void {
-
+    private requestVariables(context: string, scope: Scope, variables: string[], cb: (vars: Map<string, number> | null) => void): void {
         const resolved = new Map<string, number>();
         const rec = () => {
             if (variables.length === 0) {
@@ -430,7 +415,7 @@ export class Parser2 {
                 return;
             }
             const current = variables.splice(0, 1)[0];
-            this.requestVariable(scope, current, v => {
+            this.requestVariable(context, scope, current, v => {
                 if (v == null) {
                     cb(null);
                 } else {
@@ -443,27 +428,15 @@ export class Parser2 {
         rec();
     }
 
-    private requestVariable(scope: Scope, variableName: string, cb: (variable: number | null) => void): void {
-        // TODO: actually resolve variable
-        const resolvedVariable = `${scope.prefix}.${variableName}`;
-        const value = this.variables.get(resolvedVariable);
-        if (value) {
+    private requestVariable(context: string, scope: Scope, variableName: string, cb: (variable: number | null) => void): void {
+        this.closedList.add(cb);
+        scope.resolveVariable(context, variableName, value => {
+            this.closedList.delete(cb);
             cb(value);
-        } else {
-            const list = this.closedList.get(resolvedVariable) || [];
-            list.push(cb);
-            this.closedList.set(resolvedVariable, list);
-        }
+        });
     }
 
-    private provideVariable(scope: Scope, variableName: string, value: number): void {
-        // if (this.variables.has(variableName)) {
-        //     throw new Error(`Redefinition of variable ${variableName}`);
-        // }
-        const fqName = `${scope.prefix}.${variableName}`;
-        this.variables.set(fqName, value);
-        const list = this.closedList.get(fqName) || [];
-        this.closedList.delete(fqName);
-        list.forEach(l => l(value));
+    private provideVariable(context: string, scope: Scope, variableName: string, value: number): void {
+        scope.provideVariable(context, variableName, value);
     }
 }

@@ -5,14 +5,10 @@ import { CustomCodec } from './CustomCodec';
 export class CodecLibrary {
 
     private codecs: Map<string, Codec> = new Map();
-    private defaultCodec: Codec | undefined;
 
-    public resolve(key: string | CodecModel | undefined): Codec {
+    public resolve(key: string | CodecModel | undefined): Codec | null {
         if (key === undefined) {
-            if (this.defaultCodec === undefined) {
-                throw new Error(`Codec library is empty!`);
-            }
-            return this.defaultCodec;
+            return null;
         }
         if (typeof key === 'string') {
             const codec = this.codecs.get(key);
@@ -28,9 +24,6 @@ export class CodecLibrary {
     public registerCodec(name: string, codec: Codec) {
         if (this.codecs.has(name)) {
             throw new Error(`Redefinition of codec ${name}`);
-        }
-        if (this.defaultCodec === undefined) {
-            this.defaultCodec = codec;
         }
         this.codecs.set(name, codec);
     }

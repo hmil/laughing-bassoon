@@ -8,7 +8,7 @@ import { CStringCodec } from './CStringCodec';
 export function createCodecLibrary(definition: ParserDefinition['codecs'] | undefined) {
     const library = new CodecLibrary();
 
-    // Register built-in codecs. First codec is the default
+    // Register built-in codecs.
     library.registerCodec('int', new IntCodec());
     library.registerCodec('cstring', new CStringCodec());
 

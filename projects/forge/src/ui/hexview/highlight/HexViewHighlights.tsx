@@ -14,11 +14,11 @@ function highlightStyle(props: {
             width: number;
             bottom: number;
             hover: boolean;
+            overflowTop: boolean;
+            overflowBottom: boolean;
         }): React.CSSProperties {
     return {
         position: 'absolute',
-        borderTop: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
-        borderBottom: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         backgroundColor: `rgba(${props.color}, ${props.hover ? '0.35' : '0.25'})`,
@@ -26,7 +26,9 @@ function highlightStyle(props: {
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
         top: `${props.top * lineHeight}px`,
-        height: `${Math.max((props.bottom - props.top + 1) * lineHeight - 1, 0)}px`
+        height: `${Math.max((props.bottom - props.top + 1) * lineHeight - 1, 0)}px`,
+        ...(props.overflowTop ? {} : {borderTop: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`}),
+        ...(props.overflowBottom ? {} : {borderBottom: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`}),
     }
 }
 
@@ -48,10 +50,21 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
         return null;
     }
 
-    const startX = start % 16;
-    const endX = (end - 1) % 16;
-    const startY = Math.floor(start / 16);
-    const endY = Math.floor((end - 1) / 16);
+    let startX = start % 16;
+    let endX = (end - 1) % 16;
+    let startY = Math.floor(start / 16);
+    let endY = Math.floor((end - 1) / 16);
+    const overflowTop = startY < 0;
+    const overflowBottom = endY >= Math.floor(CHUNK_SIZE / 16);
+
+    if (overflowTop) {
+        startX = 0;
+        startY = 0;
+    }
+    if (overflowBottom) {
+        endY = Math.floor(CHUNK_SIZE / 16) - 1;
+        endX = 15;
+    }
 
     if (isSelected) {
         color = '255, 211, 0';
@@ -80,7 +93,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                 left: adapter.mapByteToCharOffset(startX),
                 width: adapter.mapByteToCharOffset(endX) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                 color: color,
-                hover: showActive()
+                hover: showActive(),
+                overflowTop, overflowBottom
             })}
             onMouseEnter={onMouseEnter()}
             onClick={onClick}
@@ -96,7 +110,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(startX),
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderRight: 'none'
                 }}
@@ -110,7 +125,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderLeft: 'none'
                 }}
@@ -127,7 +143,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(startX),
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderBottom: 'none',
                     borderRight: 'none'
@@ -142,7 +159,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(15) + adapter.byteSize,
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
                     borderLeft: 'none',
@@ -160,7 +178,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(endX),
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
                     borderLeft: 'none',
@@ -177,7 +196,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(startX),
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderBottom: 'none',
                     borderRight: 'none',
@@ -194,7 +214,8 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         color: color,
-                        hover: showActive()
+                        hover: showActive(),
+                        overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
                     borderLeft: 'none'
@@ -234,13 +255,13 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
     const appContext = React.useContext(AppContext);
 
     return <div>
-        {highlights.filter(h => h.start >= props.offset && h.end <= props.offset + CHUNK_SIZE).map(h =>
+        {highlights.filter(h => h.start < props.offset + CHUNK_SIZE && h.end > props.offset).map(h =>
             <Highlight key={h.nodeId} 
                     id={h.nodeId} 
                     isSelected={h.nodeId === appContext.state.selectedNode}
                     isActive={h.nodeId === appContext.state.hoveredNode} 
                     adapter={props.adapter} 
-                    color={h.color} 
+                    color={h.color}
                     start={h.start - props.offset} 
                     end={h.end - props.offset}></Highlight>
         )}
