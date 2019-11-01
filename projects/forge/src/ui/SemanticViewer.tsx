@@ -22,12 +22,12 @@ export function SemanticViewer() {
             { state.abt != null 
                 ? <TreeView
                         root={state.abt}
-                        hoveredNode={`${state.hoveredNode}`}
-                        selectedNode={`${state.selectedNode}`}
+                        hoveredNodes={state.hoveredNodes.map(id => id.toString())}
+                        selectedNodes={state.selectedNodes.map(id => id.toString())}
                         identify={identifyNode}
                         render={renderNode}
-                        onHover={node => dispatch(hoverHighlight({id: node.id}))}
-                        onSelect={node => dispatch(selectNode({ id: node.id }))}
+                        onHover={node => dispatch(hoverHighlight({ids: [node.id]}))}
+                        onSelect={node => dispatch(selectNode({ ids: [node.id] }))}
                         getChildren={getNodeChildren}
                 ></TreeView>
                 : <div>No data</div>

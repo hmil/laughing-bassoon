@@ -8,8 +8,8 @@ export interface TreeViewProps<T> {
     identify(t: T): string;
     getChildren(t: T): T[];
     root: T;
-    hoveredNode: string;
-    selectedNode: string;
+    hoveredNodes: string[];
+    selectedNodes: string[];
     onHover(node: T): void;
     onSelect(node: T): void;
     render(node: T): string | JSX.Element;
@@ -34,9 +34,9 @@ export function TreeView<T>(props: TreeViewProps<T>) {
         const elements = props.getChildren(node).map(c => {
             const id = props.identify(c);
             const children = renderChildren(c, level + 1);
-            const currentHasHighlight = id === props.hoveredNode || children.hasHighlight;
+            const currentHasHighlight = props.hoveredNodes.indexOf(id) >= 0 || children.hasHighlight;
             const isExpanded = state.hiddenNodes.indexOf(id) < 0; 
-            const isSelected = props.selectedNode === id;
+            const isSelected = props.selectedNodes.indexOf(id) >= 0;
             const padding = level * 20 + 4;
             const subChildren = props.getChildren(c);
             const hasChildren = subChildren != null && subChildren.length > 0;

@@ -73,12 +73,12 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
     const appContext = React.useContext(AppContext);
     function onMouseEnter() {
         return () => {
-            appContext.dispatch(hoverHighlight({id}));
+            appContext.dispatch(hoverHighlight({ids: [id]}));
         };
     }
 
     function onClick() {
-        appContext.dispatch(selectNode({id}));
+        appContext.dispatch(selectNode({ids: [id]}));
     }
 
     function showActive() {
@@ -258,8 +258,8 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
         {highlights.filter(h => h.start < props.offset + CHUNK_SIZE && h.end > props.offset).map(h =>
             <Highlight key={h.nodeId} 
                     id={h.nodeId} 
-                    isSelected={h.nodeId === appContext.state.selectedNode}
-                    isActive={h.nodeId === appContext.state.hoveredNode} 
+                    isSelected={appContext.state.selectedNodes.indexOf(h.nodeId) >= 0}
+                    isActive={appContext.state.hoveredNodes.indexOf(h.nodeId) >= 0} 
                     adapter={props.adapter} 
                     color={h.color}
                     start={h.start - props.offset} 

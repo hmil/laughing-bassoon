@@ -14,6 +14,6 @@ export const loadFile = (data: Uint8Array) => makeAction('loadFile', data);
 export const loadParseTree = (data: AbtRoot) => makeAction('loadTree', data);
 export const loadGrammar = (data: ParserDefinition) => makeAction('loadGrammar', data);
 export const requestChunks = (data: number[]) => makeAction('requestChunks', data);
-export const hoverHighlight = (data: { id: number | null}) => makeAction('hoverHighlight', data);
+export const hoverHighlight = (data: { ids: number[]}) => makeAction('hoverHighlight', data);
 export const toggleSemanticNode = (data: { id: number }) => makeAction('toggleSemanticNode', data);
-export const selectNode = (data: { id: number | null}) => makeAction('selectNode', data);
+export const selectNode = (data: { ids: number[] }) => makeAction('selectNode', data);

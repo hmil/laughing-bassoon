@@ -2,14 +2,14 @@ import * as actions from './AppActions';
 import { AbtRoot, AbtNode } from '../abt/Abt';
 import { SemanticViewerState, semanticViewerDefaultState } from './SemanticViewerState';
 import { SemanticViewer } from '../ui/SemanticViewer';
-import { ParserDefinition } from '../parser/model';
+import { ParserDefinition, AnyElement } from '../parser/model';
 
 export interface AppState {
     fileData: Uint8Array | null;
     activeChunks: number[];
     abt: AbtRoot | null;
-    hoveredNode: number | null;
-    selectedNode: number | null;
+    hoveredNodes: number[];
+    selectedNodes: number[];
     semanticViewer: SemanticViewerState;
     grammar: ParserDefinition | null;
 }
@@ -17,8 +17,8 @@ export interface AppState {
 export const appInitialState: AppState = {
     fileData: null,
     activeChunks: [0, 1, 2],
-    hoveredNode: null,
-    selectedNode: null,
+    hoveredNodes: [],
+    selectedNodes: [],
     semanticViewer: semanticViewerDefaultState,
     grammar: null,
     abt: null
@@ -54,7 +54,7 @@ export function appReducer(state: AppState, action: HexViewAction): AppState {
         case 'hoverHighlight':
             return {
                 ...state,
-                hoveredNode: action.data.id
+                hoveredNodes: action.data.ids
             }
         case 'toggleSemanticNode':
             const currentNodes = state.semanticViewer.hiddenNodes
@@ -67,26 +67,35 @@ export function appReducer(state: AppState, action: HexViewAction): AppState {
                 }
             }
         case 'selectNode':
-            // TODO: If node is not visible in tree, then expand tree to reveal node
-            if (state.abt != null && action.data.id != null) {
-                console.log(dumbFindNode(state.abt, action.data.id));
-            }
             return {
                 ...state,
-                selectedNode: action.data.id
+                selectedNodes: action.data.ids
             };
     }
 }
 
-export function dumbFindNode(tree: AbtRoot, id: number) {
-    if (tree.id == id) {
-        return tree;
+export function dumbFindNodes(tree: AbtRoot, ids: number[]): (AbtRoot | AbtNode)[] {
+    const acc: (AbtNode | AbtRoot)[] = [];
+    if (ids.indexOf(tree.id) >= 0) {
+        acc.push(tree);
     }
-    function rec(node: AbtNode): AbtNode | null {
-        if (node.id === id) {
-            return node;
+    function rec(node: AbtNode): AbtNode[] {
+        const acc: AbtNode[] = [];
+        if (ids.indexOf(node.id) >= 0) {
+            acc.push(node);
         }
-        return (node.children || []).map(n => rec(n)).find(n => n != null) || null;
+        return [...acc, ...(node.children || []).map(n => rec(n)).reduce((a, b) => [...a, ...b], [])];
     }
-    return (tree.children).map(n => rec(n)).find(n => n != null) || null;
+    return tree.children.map(n => rec(n)).reduce((a, b) => [...a, ...b], []);
+}
+
+export function findNodesByOrigin(tree: AbtRoot, origin: string, id: (elem: AnyElement | ParserDefinition) => string): AbtNode[] {
+    function rec(node: AbtNode): AbtNode[] {
+        const acc: AbtNode[] = [];
+        if (id(node.origin) === origin) {
+            acc.push(node);
+        }
+        return [...acc, ...(node.children || []).map(n => rec(n)).reduce((a, b) => [...a, ...b], [])];
+    }
+    return tree.children.map(n => rec(n)).reduce((a, b) => [...a, ...b], []);
 }

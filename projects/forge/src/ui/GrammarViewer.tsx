@@ -5,7 +5,8 @@ import { uniqId } from '../parser/uid';
 import { hoverHighlight, selectNode } from '../state/AppActions';
 import { AppContext } from '../state/AppContext';
 import { TreeView } from './widgets/TreeView';
-import { dumbFindNode } from '../state/AppState';
+import { dumbFindNodes, findNodesByOrigin } from '../state/AppState';
+import { AbtNode } from '../abt/Abt';
 
 const idMap = new WeakMap<AnyElement | ParserDefinition, string>();
 
@@ -14,22 +15,42 @@ export function GrammarViewer() {
 
     const { state, dispatch } = React.useContext(AppContext);
 
-    function getHoveredNode() {
-        if (state.abt == null || state.hoveredNode == null) {
-            return '';
+    function getHoveredNodes() {
+        if (state.abt == null) {
+            return [];
         }
-        const node = dumbFindNode(state.abt, state.hoveredNode);
+        const nodes = dumbFindNodes(state.abt, state.hoveredNodes);
         
-        return node != null ? identifyNode(node.origin) : '';
+        return nodes.map(n => identifyNode(n.origin));
     }
 
-    function getSelectedNode() {
-        if (state.abt == null || state.selectedNode == null) {
-            return '';
+    function getSelectedNodes() {
+        if (state.abt == null) {
+            return [];
         }
-        const node = dumbFindNode(state.abt, state.selectedNode);
-        
-        return node != null ? identifyNode(node.origin) : '';
+        const nodes = dumbFindNodes(state.abt, state.selectedNodes);
+
+        return nodes.map(n => identifyNode(n.origin));
+    }
+
+    function onHover(node: AnyElement | ParserDefinition) {
+        const id = identifyNode(node);
+        if (state.abt == null) {
+            return;
+        }
+
+        const nodes = findNodesByOrigin(state.abt, id, identifyNode);
+        dispatch(hoverHighlight({ids: nodes.map(n => n.id)}));
+    }
+
+    function onSelect(node: AnyElement | ParserDefinition) {
+        const id = identifyNode(node);
+        if (state.abt == null) {
+            return;
+        }
+
+        const nodes = findNodesByOrigin(state.abt, id, identifyNode);
+        dispatch(selectNode({ids: nodes.map(n => n.id)}));
     }
 
     return <div style={{
@@ -44,14 +65,14 @@ export function GrammarViewer() {
                 fontWeight: 600
             }}>Grammar</h2>
             { state.grammar != null 
-                ? <TreeView
+                ? <TreeView<AnyElement | ParserDefinition>
                         root={state.grammar}
-                        hoveredNode={getHoveredNode()}
-                        selectedNode={getSelectedNode()}
+                        hoveredNodes={getHoveredNodes()}
+                        selectedNodes={getSelectedNodes()}
                         identify={identifyNode}
                         render={renderNode}
-                        onHover={node => {}}
-                        onSelect={node => {}}
+                        onHover={onHover}
+                        onSelect={onSelect}
                         getChildren={getNodeChildren}
                 ></TreeView>
                 : <div>No data</div>
