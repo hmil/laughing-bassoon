@@ -167,7 +167,8 @@ export class Parser2 {
                     id: uniqId(),
                     start: thread.offset.offset,
                     end: thread.offset.offset,
-                    name: '[ERR] cannot resolve size'
+                    name: '[ERR] cannot resolve size',
+                    origin: elem
                 });
                 return;
             }
@@ -213,7 +214,8 @@ export class Parser2 {
                 id: uniqId(),
                 start: thread.offset.offset,
                 end: thread.offset.offset + size,
-                name: name
+                name: name,
+                origin: elem
             });
     
             thread.moveBy(new Offset(size, 0));
@@ -253,7 +255,8 @@ export class Parser2 {
                         start: thread.offset.offset,
                         end: thread.offset.offset,
                         name: '[ERR] cannot resolve size',
-                        children
+                        children,
+                        origin: elem
                     });
                     return;
                 }
@@ -264,7 +267,8 @@ export class Parser2 {
                     start: thread.offset.offset,
                     end: thread.offset.offset + size,
                     name: elem.name,
-                    children
+                    children,
+                    origin: elem
                 });
 
                 thread.moveBy(new Offset(size, 0));
@@ -280,7 +284,8 @@ export class Parser2 {
                         start: thread.offset.offset,
                         end: thread.offset.offset,
                         name: '[ERR] cannot resolve size',
-                        children
+                        children,
+                        origin: elem
                     });
                     return;
                 }
@@ -291,7 +296,8 @@ export class Parser2 {
                     start: thread.offset.offset,
                     end: end,
                     name: elem.name,
-                    children
+                    children,
+                    origin: elem
                 });
 
                 thread.moveTo(new Offset(end, 0));
@@ -372,7 +378,8 @@ export class Parser2 {
             start: 0,
             end: this.data.length,
             id: uniqId(),
-            children: [ ]
+            children: [ ],
+            origin: this.definition
         };
 
         const thread = new Thread(

@@ -5,6 +5,3 @@ export const AnyElement: t.Type<AnyElementType> = t.recursion('AnyElement', () =
     t.union(allElements)
 );
 export type AnyElement = t.TypeOf<typeof AnyElement>;
-
-
-

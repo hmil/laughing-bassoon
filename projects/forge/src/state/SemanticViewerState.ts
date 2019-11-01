@@ -1,7 +1,7 @@
 export interface SemanticViewerState {
-    expandedNodes: number[];
+    hiddenNodes: number[];
 }
 
 export const semanticViewerDefaultState: Readonly<SemanticViewerState> = {
-    expandedNodes: []
+    hiddenNodes: []
 }

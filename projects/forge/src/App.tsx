@@ -4,11 +4,12 @@ import { Toolbar } from './ui/Toolbar';
 import { SemanticViewer } from './ui/SemanticViewer';
 import { AppContext } from './state/AppContext';
 import { appInitialState, appReducer } from './state/AppState';
-import { loadFile, requestChunks, loadParseTree } from './state/AppActions';
+import { loadFile, requestChunks, loadParseTree, loadGrammar, hoverHighlight } from './state/AppActions';
 import { loadSchema } from './library/loader';
 import { ParserDefinition } from './parser/model';
 import { Parser2 } from './parser/Parser2';
-
+import { Dock } from './ui/layout/Dock';
+import { GrammarViewer } from './ui/GrammarViewer';
 
 
 export function App() {
@@ -38,6 +39,7 @@ export function App() {
         loadSchema('assets/tar.yml')
             .then(s => {
                 schema = s;
+                dispatch(loadGrammar(s));
                 parseFile();
             })
             .catch(e => console.error(e));
@@ -63,7 +65,8 @@ export function App() {
                 alignItems: 'stretch',
                 backgroundColor: '#121212',
                 color: '#ccc',
-                fontFamily: 'sans-serif'
+                fontFamily: 'sans-serif',
+                justifyContent: 'space-between'
             }}>
                 <Toolbar />
                 <div style={{
@@ -73,11 +76,23 @@ export function App() {
                     height: '300px',
                     backgroundColor: '#1d1d1d',
                 }}>
-                    <SemanticViewer></SemanticViewer>
-                    { state.abt != null
-                        ? <HexView nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0} chunks={computeChunks()} abt={state.abt} onRequestChunks={activeChunks => dispatch(requestChunks(activeChunks))} />
-                        : 'loading...'
-                    }
+                    <Dock side="left">
+                        <SemanticViewer></SemanticViewer>
+                    </Dock>
+                    <div style={{
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        width: '100px',
+                        overflow: 'hidden'
+                    }}>
+                        { state.abt != null
+                            ? <HexView nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0} chunks={computeChunks()} abt={state.abt} onRequestChunks={activeChunks => dispatch(requestChunks(activeChunks))} />
+                            : 'loading...'
+                        }
+                    </div>
+                    <Dock side="right">
+                        <GrammarViewer></GrammarViewer>
+                    </Dock>
                 </div>
             </div>
         </AppContext.Provider>

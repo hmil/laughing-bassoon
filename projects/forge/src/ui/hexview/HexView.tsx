@@ -104,6 +104,7 @@ export function HexView(props: HexViewProps) {
                 // The purpose of this div is to hide the native scroll bar
                 overflow: 'hidden',
                 cursor: 'default',
+                height: '100%'
             }}>
                 <div    style={{
                             ...props.style,

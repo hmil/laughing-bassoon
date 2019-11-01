@@ -2,6 +2,7 @@ import * as actions from './AppActions';
 import { AbtRoot, AbtNode } from '../abt/Abt';
 import { SemanticViewerState, semanticViewerDefaultState } from './SemanticViewerState';
 import { SemanticViewer } from '../ui/SemanticViewer';
+import { ParserDefinition } from '../parser/model';
 
 export interface AppState {
     fileData: Uint8Array | null;
@@ -10,6 +11,7 @@ export interface AppState {
     hoveredNode: number | null;
     selectedNode: number | null;
     semanticViewer: SemanticViewerState;
+    grammar: ParserDefinition | null;
 }
 
 export const appInitialState: AppState = {
@@ -18,6 +20,7 @@ export const appInitialState: AppState = {
     hoveredNode: null,
     selectedNode: null,
     semanticViewer: semanticViewerDefaultState,
+    grammar: null,
     abt: null
 };
 
@@ -38,6 +41,11 @@ export function appReducer(state: AppState, action: HexViewAction): AppState {
                 ...state,
                 abt: action.data
             };
+        case 'loadGrammar':
+            return {
+                ...state,
+                grammar: action.data
+            };
         case 'requestChunks':
             return {
                 ...state,
@@ -49,28 +57,28 @@ export function appReducer(state: AppState, action: HexViewAction): AppState {
                 hoveredNode: action.data.id
             }
         case 'toggleSemanticNode':
-            const currentNodes = state.semanticViewer.expandedNodes
+            const currentNodes = state.semanticViewer.hiddenNodes
             const index = currentNodes.indexOf(action.data.id);
             return {
                 ...state,
                 semanticViewer: {
                     ...SemanticViewer,
-                    expandedNodes: (index >= 0 ? [ ...currentNodes.slice(0, index), ...currentNodes.slice(index + 1)]: [ ...state.semanticViewer.expandedNodes, action.data.id ])
+                    hiddenNodes: (index >= 0 ? [ ...currentNodes.slice(0, index), ...currentNodes.slice(index + 1)]: [ ...state.semanticViewer.hiddenNodes, action.data.id ])
                 }
             }
-            case 'selectNode':
-                // TODO: If node is not visible in tree, then expand tree to reveal node
-                if (state.abt != null && action.data.id != null) {
-                    console.log(dumbFindNode(state.abt, action.data.id));
-                }
-                return {
-                    ...state,
-                    selectedNode: action.data.id
-                };
-        }
+        case 'selectNode':
+            // TODO: If node is not visible in tree, then expand tree to reveal node
+            if (state.abt != null && action.data.id != null) {
+                console.log(dumbFindNode(state.abt, action.data.id));
+            }
+            return {
+                ...state,
+                selectedNode: action.data.id
+            };
+    }
 }
 
-function dumbFindNode(tree: AbtRoot, id: number) {
+export function dumbFindNode(tree: AbtRoot, id: number) {
     if (tree.id == id) {
         return tree;
     }
