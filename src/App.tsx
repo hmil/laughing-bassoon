@@ -4,10 +4,10 @@ import { Toolbar } from './ui/Toolbar';
 import { SemanticViewer } from './ui/SemanticViewer';
 import { AppContext } from './state/AppContext';
 import { appInitialState, appReducer } from './state/AppState';
-import { loadFile, requestChunks, loadParseTree, loadGrammar, hoverHighlight } from './state/AppActions';
+import { loadFile, requestChunks, loadParseTree, loadGrammar } from './state/AppActions';
 import { loadSchema } from './library/loader';
 import { ParserDefinition } from './parser/model';
-import { Parser2 } from './parser/Parser2';
+import { Parser } from './parser/Parser';
 import { Dock } from './ui/layout/Dock';
 import { GrammarViewer } from './ui/GrammarViewer';
 
@@ -48,7 +48,7 @@ export function App() {
             if (data == null || schema == null) {
                 return;
             }
-            const parser = new Parser2(schema, data);
+            const parser = new Parser(schema, data);
             const tree = parser.parse();
             dispatch(loadParseTree(tree));
         }

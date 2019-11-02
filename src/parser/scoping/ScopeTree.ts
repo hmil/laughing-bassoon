@@ -9,7 +9,7 @@ export class Scope {
     private variables: Map<string, number> = new Map();
     private listeners: Map<string, VariableListener[]> = new Map();
 
-    constructor(private readonly parent: Scope | null, private readonly name?: string) {
+    constructor(readonly parent: Scope | null, private readonly name?: string) {
         if (parent) {
             parent.addChild(this);
         }

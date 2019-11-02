@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AppContext } from '../state/AppContext';
 import { AbtNode, AbtRoot } from '../abt/Abt';
-import { hoverHighlight, toggleSemanticNode, selectNode } from '../state/AppActions';
+import { hoverHighlight, selectNode } from '../state/AppActions';
 import { TreeView } from './widgets/TreeView';
 
 export function SemanticViewer() {

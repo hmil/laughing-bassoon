@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { HexViewContext } from '../Context';
 import { CHUNK_SIZE } from '../Config';
-import { AppContext } from 'projects/forge/src/state/AppContext';
-import { hoverHighlight, selectNode } from 'projects/forge/src/state/AppActions';
+import { AppContext } from '../../../state/AppContext';
+import { hoverHighlight, selectNode } from '../../../state/AppActions';
 
 const lineHeight = 15;
 

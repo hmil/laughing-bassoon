@@ -19,7 +19,7 @@ export function Dock(props: React.PropsWithChildren<DockProps>) {
             setWidth(width + (props.side === 'left' ? 1 : -1) * (evt.clientX - startX));
         }
 
-        function onUp(evt: MouseEvent) {
+        function onUp(_evt: MouseEvent) {
             window.removeEventListener('mouseup', onUp);
             window.removeEventListener('mousemove', onMove);
             if (dockRef.current == null) {

@@ -1,5 +1,5 @@
 import { Codec } from './Codec';
-import { Either, left, right } from 'fp-ts/lib/Either';
+import { Either, right } from 'fp-ts/lib/Either';
 
 export class CStringCodec implements Codec {
     public decode(data: Uint8Array): Either<string, string> {

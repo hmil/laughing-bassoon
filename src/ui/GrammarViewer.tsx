@@ -6,7 +6,6 @@ import { hoverHighlight, selectNode } from '../state/AppActions';
 import { AppContext } from '../state/AppContext';
 import { TreeView } from './widgets/TreeView';
 import { dumbFindNodes, findNodesByOrigin } from '../state/AppState';
-import { AbtNode } from '../abt/Abt';
 
 const idMap = new WeakMap<AnyElement | ParserDefinition, string>();
 

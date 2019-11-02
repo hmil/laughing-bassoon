@@ -1,4 +1,4 @@
-import { ParserDefinition, ContainerField, FixedField, IfField, Repeat } from './model';
+import { ParserDefinition, ContainerField, FixedField, Repeat } from './model';
 import { AnyElement } from "./model/AnyElement";
 import { AbtRoot, AbtNode } from '../abt/Abt';
 import { uniqId } from "./uid";
@@ -132,7 +132,7 @@ class Thread {
     }
 }
 
-export class Parser2 {
+export class Parser {
 
     private readonly codecLibrary: CodecLibrary;
     private readonly scopeTree: ScopeTree;
