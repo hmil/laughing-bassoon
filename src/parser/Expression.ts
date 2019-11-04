@@ -31,7 +31,7 @@ export class Expression {
     }
 
     private parseTernaryExpression():  {compute: ComputeFunction, variables: string[]} {
-        const match = this.expression.match(/^\s*(\$[a-zA-Z][a-zA-Z0-9/]+|\d+)\s*([%+-/])\s*(\$[a-zA-Z][a-zA-Z0-9/]+|\d+)\s*([%+-/])\s*(\$[a-zA-Z][a-zA-Z0-9/]+|\d+)\s*$/);
+        const match = this.expression.match(/^\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*([%+/><-])\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*([%+/><-])\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*$/);
 
         if (!match) {
             throw new Error('Invalid expression');
@@ -65,6 +65,10 @@ export class Expression {
                     return left - right;
                 case '/':
                     return ~~(left / right);
+                case '>':
+                    return left > right ? 1 : 0;
+                case '<':
+                    return left < right ? 1 : 0;
                 default:
                     throw new Error(`Unsupported operator: ${operator1}`);
             }
@@ -82,6 +86,10 @@ export class Expression {
                     return left - right;
                 case '/':
                     return ~~(left / right);
+                case '>':
+                    return left > right ? 1 : 0;
+                case '<':
+                    return left < right ? 1 : 0;
                 default:
                     throw new Error(`Unsupported operator: ${operator2}`);
             }
@@ -91,7 +99,7 @@ export class Expression {
     }
 
     private parseBinaryExpression(): {compute: ComputeFunction, variables: string[]} | null {
-        const match = this.expression.match(/^\s*(\$[a-zA-Z][a-zA-Z0-9/]+|\d+)\s*(?:([%+-/])\s*(\$[a-zA-Z][a-zA-Z0-9/]+|\d+))?\s*$/);
+        const match = this.expression.match(/^\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*(?:([%+/><-])\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+))?\s*$/);
 
         if (!match) {
             return null;
@@ -123,6 +131,10 @@ export class Expression {
                     return left - right;
                 case '/':
                     return ~~(left / right);
+                case '>':
+                    return left > right ? 1 : 0;
+                case '<':
+                    return left < right ? 1 : 0;
                 default:
                     throw new Error(`Unsupported operator: ${operator}`);
             }

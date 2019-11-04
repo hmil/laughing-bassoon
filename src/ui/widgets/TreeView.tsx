@@ -1,21 +1,34 @@
 import * as React from 'react';
+import { H_LINE_BOTTOM } from '../styles/relief'
+import { COLOR_HIGHLIGHT, COLOR_TEXT_HIGHLIGHT } from '../styles/colors';
 
 const treeViewDefaultState = {
     hiddenNodes: [] as string[]
 }
 
+export interface RenderNodeProps<T> {
+    node: T;
+    onChange: (t: T) => void;
+}
+
 export interface TreeViewProps<T> {
     identify(t: T): string;
     getChildren(t: T): T[];
+    setChild(parent: T, node: T, i: number): T;
     root: T;
-    hoveredNodes: string[];
-    selectedNodes: string[];
-    onHover(node: T): void;
-    onSelect(node: T): void;
-    render(node: T): string | JSX.Element;
+    hoveredNodes?: string[];
+    selectedNodes?: string[];
+    onHover?: (node: T) => void;
+    onSelect?: (node: T) => void;
+    renderHeader(node: RenderNodeProps<T>): string | JSX.Element;
+    renderBody?: (node: RenderNodeProps<T>) => string | JSX.Element | undefined;
+    onChange?: (node: T) => void;
 }
 
 export function TreeView<T>(props: TreeViewProps<T>) {
+
+    const hoveredNodes = props.hoveredNodes || [];
+    const selectedNodes = props.selectedNodes || [];
 
     const [state, setState] = React.useState(treeViewDefaultState);
 
@@ -29,30 +42,35 @@ export function TreeView<T>(props: TreeViewProps<T>) {
         });
     }
 
-    function renderChildren(node: T, level: number) {
+    function renderChildren(node: T, level: number, onChangeParent: (n: T) => void) {
         let hasHighlight = false;
-        const elements = props.getChildren(node).map(c => {
+        const elements = props.getChildren(node).map((c, i) => {
             const id = props.identify(c);
-            const children = renderChildren(c, level + 1);
-            const currentHasHighlight = props.hoveredNodes.indexOf(id) >= 0 || children.hasHighlight;
+            const children = renderChildren(c, level + 1, onChange);
+            const currentHasHighlight = hoveredNodes.indexOf(id) >= 0 || children.hasHighlight;
             const isExpanded = state.hiddenNodes.indexOf(id) < 0; 
-            const isSelected = props.selectedNodes.indexOf(id) >= 0;
+            const isSelected = selectedNodes.indexOf(id) >= 0;
             const padding = level * 20 + 4;
             const subChildren = props.getChildren(c);
             const hasChildren = subChildren != null && subChildren.length > 0;
             hasHighlight = hasHighlight || currentHasHighlight;
-            return <div key={id} style={{
-                borderBottom: ( hasChildren && isExpanded) ? '1px #1a1a1a solid' : undefined,
-                boxShadow: ( hasChildren && isExpanded) ? '#ffffff13 0px 1px 0px 0px' : undefined
-            }}>
+
+            function onChange(n: T) {
+                onChangeParent(props.setChild(node, n, i));
+            }
+
+            const body = props.renderBody != null ? props.renderBody({ node: c, onChange}) : undefined;
+
+            return <div key={id} style={(hasChildren && isExpanded) ? H_LINE_BOTTOM : undefined }>
                 <div style={{
-                            padding: `6px ${padding + 5}px`,
+                            // paddingRight > paddingLeft to leave space for an eventual sroll bar
+                            padding: `6px 15px 6px ${padding + 5}px`,
                             cursor: 'default',
-                            backgroundColor: isSelected ? '#d6b30a' : currentHasHighlight ? '#ffffff10' : 'transparent',
-                            color: isSelected ? '#333' : undefined,
+                            backgroundColor: isSelected ? COLOR_HIGHLIGHT : currentHasHighlight ? '#ffffff10' : 'transparent',
+                            color: isSelected ? COLOR_TEXT_HIGHLIGHT : undefined,
                         }}
-                        onMouseEnter={() => props.onHover(c)}
-                        onClick={() => props.onSelect(c)}>
+                        onMouseEnter={() => props.onHover && props.onHover(c)}
+                        onClick={() => props.onSelect && props.onSelect(c)}>
                     { (subChildren.length > 0) ?
                         <span style={{
                                     paddingRight: '5px',
@@ -68,8 +86,16 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                             <span>&#9656;</span>
                         }</span> : undefined
                     }
-                    { props.render(c) }
+                    { props.renderHeader({ node: c, onChange}) }
                 </div>
+                { body != null && isExpanded === true ?
+                    <div style={{
+                            padding: "5px",
+                            ...H_LINE_BOTTOM
+                        }}>
+                        {body}
+                    </div> :
+                undefined }
                 { isExpanded ? <div style={{
                     // paddingLeft: `${padding}px`
                 }}>{ children.elements }</div> : undefined }
@@ -82,12 +108,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
         };
     }
 
-    return <div style={{
-        borderTop: '1px #1a1a1a solid',
-        boxShadow: 'inset 0px 0.5px 1px 0px #ffffff17',
-        flexShrink: 1,
-        overflow: 'auto'
-    }}>
-        { renderChildren(props.root, 0).elements }
+    return <div>
+        { renderChildren(props.root, 0, props.onChange || (() => {})).elements }
     </div>;
 }

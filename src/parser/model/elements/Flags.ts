@@ -27,7 +27,7 @@ export const Flags = t.intersection([
 
 declare module "." {
     interface AllElements {
-        Flags: Flags;
+        'flags': Flags;
     }
 }
 export type Flags = t.TypeOf<typeof Flags>;

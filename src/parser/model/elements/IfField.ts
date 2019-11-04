@@ -29,7 +29,7 @@ export const IfField = t.intersection([
 
 declare module "." {
     interface AllElements {
-        IfField: IfField;
+        'if': IfField;
     }
 }
 export type IfField = t.TypeOf<typeof IfField>;

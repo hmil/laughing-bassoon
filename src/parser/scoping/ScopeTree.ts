@@ -9,7 +9,7 @@ export class Scope {
     private variables: Map<string, number> = new Map();
     private listeners: Map<string, VariableListener[]> = new Map();
 
-    constructor(readonly parent: Scope | null, private readonly name?: string) {
+    constructor(private readonly parent: Scope | null, private readonly name?: string) {
         if (parent) {
             parent.addChild(this);
         }
@@ -51,6 +51,11 @@ export class Scope {
             } else {
                 cb(value);
             }
+        } else if (path[0] === '..') {
+            if (this.parent == null) {
+                throw new Error('Cannot walk up past the root');
+            }
+            this.parent._resolveVariable(context, path.slice(1), cb);
         } else {
             const segment = path[0];
             const nextNode = this.children.get(segment);

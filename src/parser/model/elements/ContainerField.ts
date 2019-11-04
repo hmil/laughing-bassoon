@@ -16,7 +16,7 @@ export const ContainerField = t.intersection([
 
 declare module "." {
     interface AllElements {
-        ContainerField: ContainerField;
+        'container': ContainerField;
     }
 }
 export type ContainerField = t.TypeOf<typeof ContainerField>;

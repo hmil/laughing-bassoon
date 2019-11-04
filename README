@@ -1,1 +1,19 @@
 Main app
+
+ROADMAP:
+
+## MVP
+
+- Editor controls for the grammar
+- HexView cursor & selection behavior
+- Create nodes with selection on hexview
+- Fix scroll behavior bug
+- Edition in hex view
+
+## Nice to have
+
+- Scroll locking of grammar and structure views
+
+## Later
+
+- Text mode edition of grammars

@@ -1,4 +1,4 @@
-import { ParserDefinition, ContainerField, FixedField, Repeat } from './model';
+import { ParserDefinition, ContainerField, FixedField, Repeat, IfField } from './model';
 import { AnyElement } from "./model/AnyElement";
 import { AbtRoot, AbtNode } from '../abt/Abt';
 import { uniqId } from "./uid";
@@ -315,7 +315,6 @@ export class Parser {
 
         let aborted = false;
         loopThread.onFinalized(() => {
-            thread.log(`Loop: ${loopThread.offset}`);
             thread.stepBack();
             thread.moveTo(loopThread.offset);
             this.resume(thread);
@@ -338,18 +337,48 @@ export class Parser {
         this.resume(testThread);
     }
 
+    private processIf(elem: IfField, thread: Thread): void {
+        const scope = this.scopeTree.getScopeForNode(elem);
+        this.resolveExpression(thread.context, scope, elem.cond, result => {
+            if (result) {
+                if (elem.then) {
+                    const thenThread = thread.fork(null, elem.then);
+                    thenThread.onFinalized(() => {
+                        thread.moveTo(thenThread.offset);
+                        this.resume(thread);
+                    });
+                    this.resume(thenThread);
+                } else {
+                    this.resume(thread);
+                }
+            } else {
+                if (elem.else) {
+                    const elseThread = thread.fork(null, elem.else);
+                    elseThread.onFinalized(() => {
+                        thread.stepBack();
+                        thread.moveTo(elseThread.offset);
+                        this.resume(thread);
+                    });
+                    this.resume(elseThread);
+                } else {
+                    this.resume(thread);
+                }
+            }
+        });
+    }
+
     private processNode(elem: AnyElement, head: Thread): void {
         switch (elem.type) {
             case 'fixed':
                 return this.processFixed(elem, head);
             case 'container':
                 return this.processContainer(elem, head);
-            // case 'if':
-            //     return this.processIf(elem, head);
+            case 'if':
+                return this.processIf(elem, head);
             case 'repeat':
                 return this.processRepeat(elem, head);
             default:
-                this.resume(head);
+                throw new Error(`unknown elem type: ${elem.type}`);
         }
     }
 
@@ -374,12 +403,10 @@ export class Parser {
 
     public parse(): AbtRoot {
         const root: AbtRoot = {
-            type: 'root',
             start: 0,
             end: this.data.length,
             id: uniqId(),
-            children: [ ],
-            origin: this.definition
+            children: [ ]
         };
 
         const thread = new Thread(

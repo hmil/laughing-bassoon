@@ -1,15 +1,17 @@
+import { loadSchema } from 'library/loader';
+import { ParserDefinition } from 'parser/model';
+import { Parser } from 'parser/Parser';
 import * as React from 'react';
-import { HexView, Chunk, CHUNK_SIZE } from './ui/hexview';
-import { Toolbar } from './ui/Toolbar';
-import { SemanticViewer } from './ui/SemanticViewer';
+
+import { loadFile, loadGrammar, loadParseTree, requestChunks } from './state/AppActions';
 import { AppContext } from './state/AppContext';
 import { appInitialState, appReducer } from './state/AppState';
-import { loadFile, requestChunks, loadParseTree, loadGrammar } from './state/AppActions';
-import { loadSchema } from './library/loader';
-import { ParserDefinition } from './parser/model';
-import { Parser } from './parser/Parser';
-import { Dock } from './ui/layout/Dock';
 import { GrammarViewer } from './ui/GrammarViewer';
+import { Chunk, CHUNK_SIZE, HexView } from './ui/hexview';
+import { SemanticViewer } from './ui/SemanticViewer';
+import { COLOR_TEXT_MAIN } from './ui/styles/colors';
+import { Toolbar } from './ui/Toolbar';
+import { Dock } from './ui/widgets/Dock';
 
 
 export function App() {
@@ -64,7 +66,7 @@ export function App() {
                 flexDirection: 'column',
                 alignItems: 'stretch',
                 backgroundColor: '#121212',
-                color: '#ccc',
+                color: COLOR_TEXT_MAIN,
                 fontFamily: 'sans-serif',
                 justifyContent: 'space-between'
             }}>
@@ -76,7 +78,7 @@ export function App() {
                     height: '300px',
                     backgroundColor: '#1d1d1d',
                 }}>
-                    <Dock side="left">
+                    <Dock side="left" title="Structure">
                         <SemanticViewer></SemanticViewer>
                     </Dock>
                     <div style={{
@@ -90,7 +92,7 @@ export function App() {
                             : 'loading...'
                         }
                     </div>
-                    <Dock side="right">
+                    <Dock side="right" title="Grammar">
                         <GrammarViewer></GrammarViewer>
                     </Dock>
                 </div>

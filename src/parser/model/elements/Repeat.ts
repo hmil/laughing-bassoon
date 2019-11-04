@@ -28,7 +28,7 @@ export const Repeat = t.intersection([
 
 declare module "." {
     interface AllElements {
-        Repeat: Repeat;
+        'repeat': Repeat;
     }
 }
 export type Repeat = t.TypeOf<typeof Repeat>;

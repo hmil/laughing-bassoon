@@ -1,5 +1,5 @@
 import { AbtRoot } from '../abt/Abt';
-import { ParserDefinition } from '../parser/model';
+import { ParserDefinition, AnyElement } from '../parser/model';
 
 export interface BaseAction<Type extends string, DATA> {
     type: Type;
@@ -17,3 +17,4 @@ export const requestChunks = (data: number[]) => makeAction('requestChunks', dat
 export const hoverHighlight = (data: { ids: number[]}) => makeAction('hoverHighlight', data);
 export const toggleSemanticNode = (data: { id: number }) => makeAction('toggleSemanticNode', data);
 export const selectNode = (data: { ids: number[] }) => makeAction('selectNode', data);
+export const replaceGrammarNode = (data: AnyElement) => makeAction('replaceNode', data);

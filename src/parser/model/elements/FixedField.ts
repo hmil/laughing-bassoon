@@ -27,7 +27,7 @@ export const FixedField = t.intersection([
 
 declare module "." {
     interface AllElements {
-        FixedField: FixedField;
+        'fixed': FixedField;
     }
 }
 export type FixedField = t.TypeOf<typeof FixedField>;

@@ -97,12 +97,15 @@ content:
             name: prefix
             size: 131
             value: cstring
-        - type: fixed
-          name: content
-          size: "$HEADER/SIZE"
-        - type: fixed
-          name: padding
-          size: "512 - $HEADER/SIZE % 512"
+        - type: if
+          cond: "$HEADER/SIZE > 0"
+          then:
+          - type: fixed
+            name: content
+            size: "$HEADER/SIZE"
+          - type: fixed
+            name: padding
+            size: "512 - $HEADER/SIZE % 512"
   - type: container
     name: end clearence
     content:

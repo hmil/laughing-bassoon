@@ -1,7 +1,9 @@
 import * as React from 'react';
+import { H_LINE_BOTTOM } from '../styles/relief';
 
 export interface DockProps {
     side: 'left' | 'right';
+    title: string;
 }
 
 export function Dock(props: React.PropsWithChildren<DockProps>) {
@@ -44,7 +46,9 @@ export function Dock(props: React.PropsWithChildren<DockProps>) {
         zIndex: 200,
         marginTop: '2px',
         borderRadius: '3px',
-        flexShrink: 0
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column'
     }}>
         <div style={{
             position: 'absolute',
@@ -54,6 +58,19 @@ export function Dock(props: React.PropsWithChildren<DockProps>) {
             ...resizerPosition
         }}
         onMouseDown={startDrag}></div>
-        {props.children}
+        <h2 style={{
+                padding: '10px 12px',
+                margin: 0,    
+                fontSize: '16px',
+                fontWeight: 600,
+                ...H_LINE_BOTTOM
+            }}>{props.title}</h2>
+        <div style={{
+            height: "100%",
+            flexShrink: 1,
+            overflow: "auto"
+        }}>
+            {props.children}
+        </div>
     </div>;
 }
