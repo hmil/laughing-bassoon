@@ -1,11 +1,7 @@
 import * as t from 'io-ts';
-import { CodecModel } from '../core/CodecModel';
 import { AnyConstraint } from '../constraints';
 
 export const BaseField = t.partial({
-    value: t.union([
-        t.string,
-        CodecModel
-    ]),
+    codec: t.string,
     constraints: t.array(AnyConstraint)
 });

@@ -17,3 +17,8 @@ ROADMAP:
 ## Later
 
 - Text mode edition of grammars
+
+
+Performance notes:
+
+- use tree-like data structures whose unchanged branches are ref-equal. Pass this data structure down tree-like components. use React.memo to avoid re-renders.

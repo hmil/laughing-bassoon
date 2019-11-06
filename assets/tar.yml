@@ -35,68 +35,68 @@ content:
           - type: fixed
             name: name
             size: 100
-            value: cstring
+            codec: cstring
           - type: fixed
             name: mode
             ref: MODE
             size: 8
-            value: octal
+            codec: octal
           - type: fixed
             name: uid
             size: 8
-            value: cstring
+            codec: cstring
           - type: fixed
             name: gid
             size: 8
-            value: cstring
+            codec: cstring
           - type: fixed
             name: size
             ref: SIZE
             size: 12
-            value: octal
+            codec: octal
           - type: fixed
             name: mtime
             size: 12
-            value: octal
+            codec: octal
           - type: fixed
             name: chksum
             size: 8
-            value: octal
+            codec: octal
           - type: fixed
             name: typeflag
             size: 1
           - type: fixed
             name: linkname
             size: 100
-            value: cstring
+            codec: cstring
           - type: fixed
             name: magic
             size: 6
-            value: cstring
+            codec: cstring
           - type: fixed
             name: version
             size: 2
-            value: octal
+            codec: octal
           - type: fixed
             name: uname
             size: 32
-            value: cstring
+            codec: cstring
           - type: fixed
             name: gname
             size: 32
-            value: cstring
+            codec: cstring
           - type: fixed
             name: devmajor
             size: 8
-            value: cstring
+            codec: cstring
           - type: fixed
             name: devminor
             size: 8
-            value: cstring
+            codec: cstring
           - type: fixed
             name: prefix
             size: 131
-            value: cstring
+            codec: cstring
         - type: if
           cond: "$HEADER/SIZE > 0"
           then:

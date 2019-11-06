@@ -8,7 +8,7 @@ interface HexChunkProps {
     data: Uint8Array;
 }
 
-export function HexChunk(props: HexChunkProps) {
+export const HexChunk = React.memo(function _HexChunk(props: HexChunkProps) {
     return (
         <div style={{
             display: 'flex',
@@ -18,4 +18,4 @@ export function HexChunk(props: HexChunkProps) {
             <HexViewAscii offset={props.offset} data={props.data} />
         </div>
     );
-}
+});

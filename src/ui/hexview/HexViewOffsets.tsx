@@ -12,8 +12,6 @@ function hexViewOffset(props: { offset: number, addressBits: number }) {
 }
 
 export function HexViewOffsets(props: { from: number, length: number }) {
-    const numberOfLines = Math.ceil(props.length / 16);
-    const startOffset = Math.floor(props.from / 16);
 
     const [isDragging, setIsDragging] = React.useState(false);
     const containerRef = React.createRef<HTMLDivElement>();
@@ -57,6 +55,15 @@ export function HexViewOffsets(props: { from: number, length: number }) {
         setIsDragging(false);
     }
 
+    const textContent = React.useMemo(() => {
+        const numberOfLines = Math.ceil(props.length / 16);
+        const startOffset = Math.floor(props.from / 16);
+        return new Array(numberOfLines)
+            .fill(0)
+            .map((_, i) => hexViewOffset({ addressBits: 32, offset: startOffset + i }))
+            .join('\n')
+    }, [props]);
+
     return (
         <div    className="offset" 
                 ref={containerRef}
@@ -69,12 +76,7 @@ export function HexViewOffsets(props: { from: number, length: number }) {
                     whiteSpace: 'pre',
                     color: '#aaa'
                 }}>
-            {
-                new Array(numberOfLines)
-                .fill(0)
-                .map((_, i) => hexViewOffset({ addressBits: 32, offset: startOffset + i }))
-                .join('\n')
-            }
+            { textContent }
         </div>
     );
 }

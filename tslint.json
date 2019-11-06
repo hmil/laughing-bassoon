@@ -1,3 +1,6 @@
 {
-    "extends": [ "typestrict" ]
+    "extends": [ "typestrict" ],
+    "rules": {
+        "no-use-before-declare": false
+    }
 }

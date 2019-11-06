@@ -8,7 +8,7 @@ export interface DockProps {
 
 export function Dock(props: React.PropsWithChildren<DockProps>) {
 
-    const [width, setWidth] = React.useState(400);
+    const [width, setWidth] = React.useState(450);
 
     const dockRef = React.useRef<HTMLDivElement>(null);
 

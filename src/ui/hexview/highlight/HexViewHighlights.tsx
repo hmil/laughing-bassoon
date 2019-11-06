@@ -2,10 +2,14 @@ import * as React from 'react';
 import { HexViewContext } from '../Context';
 import { CHUNK_SIZE } from '../Config';
 import { AppContext } from '../../../state/AppContext';
-import { hoverHighlight, selectNode } from '../../../state/AppActions';
+import { selectNode } from '../../../state/AppActions';
+import { UIPresentationServiceInjector, UIPresentationService, AbtUITree } from 'ui/services/UIPresentationService';
+import { callback } from 'ui/react/hooks';
+import { AppActions } from 'state/AppState';
+import { If } from 'ui/react/tsx-helpers';
+
 
 const lineHeight = 15;
-
 
 function highlightStyle(props: {
             color: string;
@@ -22,7 +26,6 @@ function highlightStyle(props: {
         borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         backgroundColor: `rgba(${props.color}, ${props.hover ? '0.35' : '0.25'})`,
-        // mixBlendMode: 'screen',
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
         top: `${props.top * lineHeight}px`,
@@ -43,7 +46,16 @@ interface HighlightProps {
     id: number;
 }
 
-function Highlight({ start, adapter, end, color, isActive, isSelected, id}: HighlightProps) {
+const onEnterCallback = callback((uiService: UIPresentationService, id: number) => () => {
+    uiService.hoverNodes([id]);
+});
+
+const onClickCallback = callback((dispatch: React.Dispatch<AppActions>, id: number) => () => dispatch(selectNode({ids: [id]})));
+
+const Highlight = React.memo(function _Highlight({ start, adapter, end, color, isActive, isSelected, id}: HighlightProps) {
+
+    const uiService = React.useContext(UIPresentationServiceInjector);
+    const appContext = React.useContext(AppContext);
 
     if (start >= end) {
         // Can't highlight something which has no width
@@ -70,20 +82,11 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
         color = '255, 211, 0';
     }
 
-    const appContext = React.useContext(AppContext);
-    function onMouseEnter() {
-        return () => {
-            appContext.dispatch(hoverHighlight({ids: [id]}));
-        };
-    }
+    
+    const onMouseEnter = onEnterCallback(uiService, id);
+    const onClick = onClickCallback(appContext.dispatch, id);
 
-    function onClick() {
-        appContext.dispatch(selectNode({ids: [id]}));
-    }
-
-    function showActive() {
-        return isSelected || isActive;
-    }
+    const showActive = isSelected || isActive;
 
     if (endY - startY === 0) { // single line
         return <div
@@ -93,10 +96,10 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                 left: adapter.mapByteToCharOffset(startX),
                 width: adapter.mapByteToCharOffset(endX) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                 color: color,
-                hover: showActive(),
+                hover: showActive,
                 overflowTop, overflowBottom
             })}
-            onMouseEnter={onMouseEnter()}
+            onMouseEnter={onMouseEnter}
             onClick={onClick}
         ></div>;
 
@@ -110,12 +113,12 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(startX),
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
             <div
                 style={{
@@ -125,12 +128,12 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderLeft: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
         </div>;
     } else {
@@ -143,13 +146,13 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(startX),
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(startX) + adapter.byteSize,
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderBottom: 'none',
                     borderRight: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
             <div
                 style={{
@@ -159,7 +162,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(15) + adapter.byteSize,
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
@@ -167,7 +170,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                     borderRight: 'none',
                     borderBottom: 'none',
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
 
             <div
@@ -178,7 +181,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         width: adapter.mapByteToCharOffset(15) - adapter.mapByteToCharOffset(endX),
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
@@ -186,7 +189,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                     borderRight: 'none',
                     backgroundColor: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
             <div
                 style={{
@@ -196,7 +199,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(startX),
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderBottom: 'none',
@@ -204,7 +207,7 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                     borderLeft: 'none',
                     backgroundColor: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
             <div
                 style={{
@@ -214,17 +217,17 @@ function Highlight({ start, adapter, end, color, isActive, isSelected, id}: High
                         left: adapter.mapByteToCharOffset(0),
                         width: adapter.mapByteToCharOffset(endX) + adapter.byteSize,
                         color: color,
-                        hover: showActive(),
+                        hover: showActive,
                         overflowTop, overflowBottom
                     }),
                     borderTop: 'none',
                     borderLeft: 'none'
                 }}
-                onMouseEnter={onMouseEnter()}
+                onMouseEnter={onMouseEnter}
                 onClick={onClick}></div>
         </div>;
     }
-}
+});
 
 export interface HighlightAdapter {
     /**
@@ -249,22 +252,46 @@ export interface HexViewHighlightsProps {
     offset: number;
 }
 
-export function HexViewHighlights(props: HexViewHighlightsProps) {
+export const RecursiveHighlight = React.memo(function _RecursiveHighlight(props: {abt: AbtUITree, offset: number, adapter: HighlightAdapter}) {
+    const node = props.abt.node;
+    return <React.Fragment>
+        <If cond={node.start < props.offset + CHUNK_SIZE && node.end > props.offset}>
+            <Highlight  id={node.id} 
+                        isSelected={false}
+                        isActive={props.abt.hovered} 
+                        adapter={props.adapter} 
+                        color={props.abt.color}
+                        start={node.start - props.offset} 
+                        end={node.end - props.offset}></Highlight>
+            { props.abt.children.map(c => <RecursiveHighlight
+                    key={c.node.id}
+                    abt={c}
+                    offset={props.offset}
+                    adapter={props.adapter}></RecursiveHighlight>)}
+        </If>
+    </React.Fragment>;
+});
 
-    const { highlights } = React.useContext(HexViewContext);
-    const appContext = React.useContext(AppContext);
+export const HexViewHighlights = React.memo(function _HexViewHighlights(props: HexViewHighlightsProps) {
+
+    const { abt } = React.useContext(HexViewContext);
 
     return <div>
-        {highlights.filter(h => h.start < props.offset + CHUNK_SIZE && h.end > props.offset).map(h =>
+        { abt.children.map(c => <RecursiveHighlight
+                    key={c.node.id}
+                    abt={c}
+                    offset={props.offset}
+                    adapter={props.adapter}></RecursiveHighlight>)}
+        {/* {highlights.filter(h => h.start < props.offset + CHUNK_SIZE && h.end > props.offset).map(h =>
             <Highlight key={h.nodeId} 
                     id={h.nodeId} 
                     isSelected={appContext.state.selectedNodes.indexOf(h.nodeId) >= 0}
-                    isActive={appContext.state.hoveredNodes.indexOf(h.nodeId) >= 0} 
+                    isActive={h.hovered} 
                     adapter={props.adapter} 
                     color={h.color}
                     start={h.start - props.offset} 
                     end={h.end - props.offset}></Highlight>
-        )}
+        )} */}
         {/* { props.selection.start >= props.offset && props.selection.end <= props.offset + CHUNK_SIZE ? 
             <Highlight id={-1} 
                 adapter={props.adapter} 
@@ -275,4 +302,4 @@ export function HexViewHighlights(props: HexViewHighlightsProps) {
             : undefined
         } */}
     </div>
-}
+});

@@ -33,14 +33,12 @@ export interface HexViewAsciiProps {
 }
 
 export function HexViewAscii(props: HexViewAsciiProps) {
-    const numberOfLines = Math.ceil(props.data.length / 16);
-
     const { state, dispatch, getCurrentScroll } = React.useContext(HexViewContext);
 
     const [isDragging, setIsDragging] = React.useState(false);
     const containerRef = React.createRef<HTMLDivElement>();
 
-    function startSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+    const startSelection = React.useCallback((evt: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         if (evt.button !== 0) return;
         evt.preventDefault();
         const currentRef = containerRef.current;
@@ -53,9 +51,9 @@ export function HexViewAscii(props: HexViewAsciiProps) {
             drag: offset
         }));
         setIsDragging(true);
-    }
+    }, [setIsDragging, dispatch, containerRef.current, getCurrentScroll]);
 
-    function moveSelection(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+    const moveSelection = React.useCallback((evt: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         evt.preventDefault();
         const currentRef = containerRef.current;
         if (currentRef == null) {
@@ -70,11 +68,18 @@ export function HexViewAscii(props: HexViewAsciiProps) {
             anchor: state.selection.anchor,
             drag: offset
         }));
-    }
+    }, [containerRef.current, isDragging, dispatch, state.selection.anchor, getCurrentScroll]);
 
-    function stopSelection() {
+    const stopSelection = React.useCallback(() => {
         setIsDragging(false);
-    }
+    }, [setIsDragging]);
+
+    const textContent = React.useMemo(() => {
+        const numberOfLines = Math.ceil(props.data.length / 16);
+        return new Array(numberOfLines).fill(0)
+            .map((_, i) => formatAsciiLine(props.data.slice(i * 16, (i + 1) * 16 )))
+            .join('\n')
+    }, [props.data]);
 
     return (
         <div    className="asciiData" 
@@ -101,11 +106,7 @@ export function HexViewAscii(props: HexViewAsciiProps) {
                 <div style={{
                     position: 'relative',
                     pointerEvents: 'none'
-                }}>{
-                    new Array(numberOfLines).fill(0)
-                        .map((_, i) => formatAsciiLine(props.data.slice(i * 16, (i + 1) * 16 )))
-                        .join('\n')
-                }</div>
+                }}>{ textContent }</div>
             </div>
         </div>
     );

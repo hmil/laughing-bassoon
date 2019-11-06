@@ -134,7 +134,7 @@ class Thread {
 
 export class Parser {
 
-    private readonly codecLibrary: CodecLibrary;
+    public readonly codecLibrary: CodecLibrary;
     private readonly scopeTree: ScopeTree;
     private openList: Thread[] = [];
     private closedList: Set<(variable: number | null) => void> = new Set();
@@ -186,7 +186,7 @@ export class Parser {
             }
 
             const nextOffset = thread.offset.add(new Offset(size, 0));
-            const codec = this.codecLibrary.resolve(elem.value);
+            const codec = this.codecLibrary.resolve(elem.codec);
 
             if (codec != null) {
                 pipe(
@@ -403,6 +403,8 @@ export class Parser {
 
     public parse(): AbtRoot {
         const root: AbtRoot = {
+            type: 'root',
+            origin: this.definition,
             start: 0,
             end: this.data.length,
             id: uniqId(),

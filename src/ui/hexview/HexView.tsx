@@ -1,18 +1,17 @@
 import * as React from 'react';
 import { HexChunk } from './HexChunk';
-import { Chunk, compareChunks } from './Chunk';
+import { Chunk } from './Chunk';
 import { hexViewReducer, hexViewInitialState } from './HexViewState';
 import { HexViewContext } from './Context';
 import { CHUNK_SIZE } from './Config';
-import { AbtRoot } from '../../abt/Abt';
-import { abtToHighlights } from './highlight/abtToHighlights';
+import { AbtUITree } from 'ui/services/UIPresentationService';
 
 
 interface HexViewProps {
     chunks: Chunk[];
     onRequestChunks: (chunks: number[]) => void;
     style?: React.CSSProperties;
-    abt: AbtRoot;
+    abt: AbtUITree;
     // Total number of chunks
     nChunks: number;
 }
@@ -23,27 +22,22 @@ const SCROLL_OFFSET = 1920; // TODO compute at runtime
 
 export function HexView(props: HexViewProps) {
 
-    const sortedChunks = props.chunks.slice().sort(compareChunks);
-
     let debounceRequests: number | null;
 
     let dom = {
         screen: React.useRef<HTMLDivElement>(null),
-        paper: null as HTMLDivElement | null,
+        paper: React.useRef<HTMLDivElement>(null),
     };
 
     const [firstChunk, setFirstChunk] = React.useState(0);
     const [scrollPosition, setScrollPosition] = React.useState(0);
-
     const [state, dispatch] = React.useReducer(hexViewReducer, hexViewInitialState);
 
-    const highlights = abtToHighlights(props.abt);
-
     React.useEffect(() => {
-        if (sortedChunks.length < 1) {
+        if (props.chunks.length < 1) {
             return;
         }
-        const nextFirstChunk = sortedChunks[0].chunkNr;
+        const nextFirstChunk = props.chunks[0].chunkNr;
         if (firstChunk != nextFirstChunk) {
             if (dom.screen.current != null && scrollPosition === dom.screen.current.scrollTop) {
                 // Some browsers update the scroll automatically to accomodate infinite scroll experiences (Chrome)
@@ -53,21 +47,21 @@ export function HexView(props: HexViewProps) {
             }
             setFirstChunk(nextFirstChunk);
         }
-    })
+    });
 
     function onScroll() {
         const screen = dom.screen.current;
-        const paper = dom.paper;
+        const paper = dom.paper.current;
         if (screen != null && paper != null) {
             // Whenever we get "too close" to an edge, request a different set of data.
-            if (paper.clientHeight - screen.scrollTop - screen.clientHeight < FETCH_THRESHOLD && firstChunk + sortedChunks.length < props.nChunks) {
+            if (paper.clientHeight - screen.scrollTop - screen.clientHeight < FETCH_THRESHOLD && firstChunk + props.chunks.length < props.nChunks) {
                 if (debounceRequests != null) {
                     cancelAnimationFrame(debounceRequests);
                 }
                 debounceRequests = requestAnimationFrame(() => {
                     debounceRequests = null;
-                    const newChunkSet = sortedChunks.map(c => c.chunkNr)
-                            .concat(sortedChunks[sortedChunks.length - 1].chunkNr + 1)
+                    const newChunkSet = props.chunks.map(c => c.chunkNr)
+                            .concat(props.chunks[props.chunks.length - 1].chunkNr + 1)
                             .slice(1);
                     setScrollPosition(screen.scrollTop);
                     props.onRequestChunks(newChunkSet);
@@ -79,8 +73,8 @@ export function HexView(props: HexViewProps) {
                 debounceRequests = requestAnimationFrame(() => {
                     debounceRequests = null;
                     const newChunkSet = [firstChunk - 1]
-                            .concat(sortedChunks.map(c => c.chunkNr))
-                            .slice(0, sortedChunks.length);
+                            .concat(props.chunks.map(c => c.chunkNr))
+                            .slice(0, props.chunks.length);
                     setScrollPosition(screen.scrollTop);
                     props.onRequestChunks(newChunkSet);
                 });
@@ -93,12 +87,16 @@ export function HexView(props: HexViewProps) {
         return <HexChunk key={chunk.chunkNr} offset={offset} data={chunk.data} />;
     }
 
-    function getCurrentScroll() {
-        return dom.screen.current ? dom.screen.current.scrollTop : 0;
-    }
+    const ctx = React.useMemo(() => {
+        return {abt: props.abt, state, dispatch, getCurrentScroll};
+
+        function getCurrentScroll() {
+            return dom.screen.current ? dom.screen.current.scrollTop : 0;
+        }
+    }, [props.abt, state, dispatch, dom.screen.current]);
 
     return (
-        <HexViewContext.Provider value={{highlights, state, dispatch, getCurrentScroll}}>
+        <HexViewContext.Provider value={ctx}>
             <div
                 style={{
                 // The purpose of this div is to hide the native scroll bar
@@ -123,8 +121,8 @@ export function HexView(props: HexViewProps) {
                                 padding: '0.5em 1ch'
                             }}
                             className="hexView"
-                            ref={el => dom.paper = el}>
-                        { sortedChunks.sort(compareChunks).map(renderChunk) }
+                            ref={dom.paper}>
+                        { props.chunks.map(renderChunk) }
                     </div>
                 </div>
             </div>

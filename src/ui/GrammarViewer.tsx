@@ -1,15 +1,19 @@
-import { Parser } from 'parser/Parser';
 import * as React from 'react';
 
-import { AnyElement, ContainerField } from '../parser/model';
-import { uniqId } from '../parser/uid';
-import { hoverHighlight, loadGrammar, loadParseTree, selectNode } from '../state/AppActions';
-import { AppContext } from '../state/AppContext';
-import { dumbFindNodes, findNodesByOrigin } from '../state/AppState';
-import { FixedFieldEditorHeader } from './editor/FixedFieldEditorHeader';
-import { RenderNodeProps, TreeView } from './widgets/TreeView';
+import { Parser } from 'parser/Parser';
 
-const idMap = new WeakMap<AnyElement, string>();
+import { AnyElement, ContainerField, ParserDefinition } from '../parser/model';
+import { uniqId } from '../parser/uid';
+import { hoverAbtNode, loadGrammar, loadParseTree, selectNode } from '../state/AppActions';
+import { AppContext } from '../state/AppContext';
+import { dumbFindNodes, findNodesByOrigin, AppActions, GrammarUiStateTree } from '../state/AppState';
+import { FixedFieldEditorHeader } from './editor/FixedFieldEditorHeader';
+import { RenderNodeProps, TreeView, TreeViewAdapter } from './widgets/TreeView';
+import { TextInput } from './widgets/TextInput';
+import { useMemo, callback } from './react/hooks';
+import { AbtRoot } from 'abt/Abt';
+
+const idMap = new WeakMap<AnyElement | ParserDefinition, string>();
 
 function makeSyntheticRoot(nodes: AnyElement[]): ContainerField {
     return {
@@ -23,48 +27,74 @@ export function GrammarViewer() {
 
     const { state, dispatch } = React.useContext(AppContext);
 
-    const hoveredNodes = (() => {
-        if (state.abt == null) {
-            return [];
-        }
-        const nodes = dumbFindNodes(state.abt, state.hoveredNodes);
+    // const hoveredNodes = (() => {
+    //     if (state.abt == null) {
+    //         return [];
+    //     }
+    //     const nodes = dumbFindNodes(state.abt, state.hoveredNodes);
         
-        return nodes.map(n => identifyNode(n.origin));
-    })();
+    //     return nodes.map(n => identifyNode(n.origin));
+    // })();
 
-    const selectedNodes = (() => {
-        if (state.abt == null) {
-            return [];
-        }
-        const nodes = dumbFindNodes(state.abt, state.selectedNodes);
+    const selectedNodes = useMemo(computeSelectedNodes, [state.abt, state.selectedNodes]);
 
-        return nodes.map(n => identifyNode(n.origin));
-    })();
+    const onHover = onOverCallback(state.abt, dispatch);
+    const onOut = onOutCallback(dispatch);
+    const onSelect = onSelectCallback(state.abt, dispatch);
+    const onChange = onChangeCallback(state.grammar, dispatch, state.fileData);
 
-    function onHover(node: AnyElement) {
-        const id = identifyNode(node);
-        if (state.abt == null) {
-            return;
-        }
-
-        const nodes = findNodesByOrigin(state.abt, id, identifyNode);
-        dispatch(hoverHighlight({ids: nodes.map(n => n.id)}));
+    if (state.grammar != null && state.grammarUiState != null) {
+        const adapter = makeAdapter(makeSyntheticRoot(state.grammar.content), state.grammarUiState);
+    
+        return <TreeView
+                    identify={identifyNode}
+                    renderHeader={renderHeader}
+                    renderBody={renderEditor}
+                    selectedNodes={selectedNodes}
+                    onOver={onHover}
+                    onOut={onOut}
+                    onSelect={onSelect}
+                    setChild={setNodeChild}
+                    onChange={onChange}
+                    adapter={adapter}
+            ></TreeView>
+    } else {
+        return <div>No data</div>;
     }
 
-    function onSelect(node: AnyElement) {
+}
+
+const onOverCallback = callback((abt: AbtRoot | null, dispatch: React.Dispatch<AppActions>) => 
+    (node: AnyElement) => {
         const id = identifyNode(node);
-        if (state.abt == null) {
+        if (abt == null) {
             return;
         }
 
-        const nodes = findNodesByOrigin(state.abt, id, identifyNode);
+        const nodes = findNodesByOrigin(abt, id, identifyNode);
+        dispatch(hoverAbtNode({ids: nodes.map(n => n.id)}));
+    }
+);
+
+const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => () => dispatch(hoverAbtNode({ids: []})));
+
+const onSelectCallback = callback((abt: AbtRoot | null, dispatch: React.Dispatch<AppActions>) => 
+    (node: AnyElement) => {
+        const id = identifyNode(node);
+        if (abt == null) {
+            return;
+        }
+
+        const nodes = findNodesByOrigin(abt, id, identifyNode);
         if (nodes.length > 0) {
             dispatch(selectNode({ids: nodes.map(n => n.id)}));
         }
     }
+);
 
-    function onChange(syntheticRoot: AnyElement) {
-        if (state.grammar == null) {
+const onChangeCallback = callback((grammar: ParserDefinition | null, dispatch: React.Dispatch<AppActions>, fileData: Uint8Array | null) =>
+    (syntheticRoot: AnyElement) => {
+        if (grammar == null) {
             throw new Error('Grammar was null for some reason');
         }
         if (!('content' in syntheticRoot) || syntheticRoot.content == null) {
@@ -72,102 +102,118 @@ export function GrammarViewer() {
         }
         console.log('changed');
         const newGrammar = {
-            ...state.grammar,
+            ...grammar,
             content: syntheticRoot.content
         };
         dispatch(loadGrammar(newGrammar));
-        if (state.fileData != null) {
-            const parser = new Parser(newGrammar, state.fileData);
+        if (fileData != null) {
+            const parser = new Parser(newGrammar, fileData);
             const tree = parser.parse();
             dispatch(loadParseTree(tree));
         }
     }
+);
 
-    return state.grammar != null 
-        ? <TreeView<AnyElement>
-                root={makeSyntheticRoot(state.grammar.content)}
-                identify={identifyNode}
-                renderHeader={renderHeader}
-                renderBody={renderEditor}
-                hoveredNodes={hoveredNodes}
-                selectedNodes={selectedNodes}
-                onHover={onHover}
-                onSelect={onSelect}
-                getChildren={getNodeChildren}
-                setChild={setNodeChild}
-                onChange={onChange}
-        ></TreeView>
-        : <div>No data</div>;
+function computeSelectedNodes(abt: AbtRoot | null, selectedNodes: number[]) {
+    return () => {
+        if (abt == null) {
+            return [];
+        }
+        const nodes = dumbFindNodes(abt, selectedNodes);
 
-    function renderEditor({node}: RenderNodeProps<AnyElement>) {
-        switch (node.type) {
-            case 'repeat':
-                return <div style={{
-                    padding: "0 10px"
+        return nodes.map(n => identifyNode(n.origin));
+    };
+}
+
+function renderEditor({node}: RenderNodeProps<AnyElement>) {
+    switch (node.type) {
+        case 'repeat':
+            return <div style={{
+                padding: "0 10px"
+            }}>
+                repeat until:
+                <div style={{
+                        border: "1px #1a1a1a solid",
+                        minHeight: "100px",
+                        padding: "3px"
                 }}>
-                    repeat until:
+                    {/* <TreeView
+                        root={makeSyntheticRoot(node.until)}
+                        identify={identifyNode}
+                        renderHeader={renderHeader}
+                        renderBody={renderEditor}
+                        getChildren={getNodeChildren}
+                        setChild={setNodeChild}></TreeView> */}
+                </div>
+            </div>;
+        case 'if':
+            return <div style={{
+                padding: "0 10px"
+            }}>
+                <div>if <TextInput value={node.cond}/></div>
+                { node.then != null ? <div>
+                    then:
                     <div style={{
                             border: "1px #1a1a1a solid",
                             minHeight: "100px",
                             padding: "3px"
                     }}>
-                        <TreeView
-                            root={makeSyntheticRoot(node.until)}
+                        {/* <TreeView
+                            root={makeSyntheticRoot(node.then)}
                             identify={identifyNode}
                             renderHeader={renderHeader}
                             renderBody={renderEditor}
+                            hoveredNodes={hoveredNodes}
+                            selectedNodes={selectedNodes}
+                            onOver={onHover}
+                            onSelect={onSelect}
                             getChildren={getNodeChildren}
-                            setChild={setNodeChild}></TreeView>
+                            setChild={setNodeChild}></TreeView> */}
                     </div>
-                </div>;
-            case 'if':
-                return <div style={{
-                    padding: "0 10px"
-                }}>
-                    <div>if <input value={node.cond} readOnly/></div>
-                    { node.then != null ? <div>
-                        then:
-                        <div style={{
-                                border: "1px #1a1a1a solid",
-                                minHeight: "100px",
-                                padding: "3px"
-                        }}>
-                            <TreeView
-                                root={makeSyntheticRoot(node.then)}
-                                identify={identifyNode}
-                                renderHeader={renderHeader}
-                                renderBody={renderEditor}
-                                hoveredNodes={hoveredNodes}
-                                selectedNodes={selectedNodes}
-                                onHover={onHover}
-                                onSelect={onSelect}
-                                getChildren={getNodeChildren}
-                                setChild={setNodeChild}></TreeView>
-                        </div>
-                    </div> : undefined }
-                    { node.else != null ? <div>
-                        else:
-                        <div style={{
-                                border: "1px #1a1a1a solid",
-                                minHeight: "100px",
-                                padding: "3px"
-                        }}>
-                            <TreeView
-                                root={makeSyntheticRoot(node.else)}
-                                identify={identifyNode}
-                                renderHeader={renderHeader}
-                                renderBody={renderEditor}
-                                hoveredNodes={hoveredNodes}
-                                selectedNodes={selectedNodes}
-                                onHover={onHover}
-                                onSelect={onSelect}
-                                getChildren={getNodeChildren}
-                                setChild={setNodeChild}></TreeView>
-                        </div>
-                    </div> : undefined }
-                </div>;
+                </div> : undefined }
+                { node.else != null ? <div>
+                    else:
+                    <div style={{
+                            border: "1px #1a1a1a solid",
+                            minHeight: "100px",
+                            padding: "3px"
+                    }}>
+                        {/* <TreeView
+                            root={makeSyntheticRoot(node.else)}
+                            identify={identifyNode}
+                            renderHeader={renderHeader}
+                            renderBody={renderEditor}
+                            hoveredNodes={hoveredNodes}
+                            selectedNodes={selectedNodes}
+                            onOver={onHover}
+                            onSelect={onSelect}
+                            getChildren={getNodeChildren}
+                            setChild={setNodeChild}></TreeView> */}
+                    </div>
+                </div> : undefined }
+            </div>;
+    }
+    return undefined;
+}
+
+function makeAdapter(node: AnyElement, tree: GrammarUiStateTree): TreeViewAdapter<AnyElement> {
+    return {
+        getChildren() {
+            return useMemo(makeAdapterChildren, [node, tree]);
+        },
+        isHovered: false, // TODO: Performant hover feature
+        node
+    };
+}
+
+function makeAdapterChildren(node: AnyElement, tree: GrammarUiStateTree) {
+    return () => {
+        const children = getNodeChildren(node);
+        const hoverChildren = tree.children;
+        if (hoverChildren.length !== children.length) {
+            throw new Error('length dont match');
         }
-        return undefined;
+        return children.map((n, i) => makeAdapter(n, hoverChildren[i]));
     }
 }
 
@@ -222,7 +268,7 @@ function renderHeader({node, onChange}: RenderNodeProps<AnyElement>) {
     }
 }
 
-function identifyNode(node: AnyElement) {
+function identifyNode(node: AnyElement | ParserDefinition) {
     let id = idMap.get(node);
     if (id == null) {
         id = `${uniqId()}`

@@ -35,8 +35,7 @@ const highlightAdapter: HighlightAdapter = {
     byteSize: 2
 }
 
-export function HexViewBytes(props: HexViewBytesProps) {
-    const numberOfLines = Math.ceil(props.data.length / 16);
+export const HexViewBytes = React.memo(function HexViewBytes(props: HexViewBytesProps) {
 
     const [localState, setLocalState] = useState({isDragging: false, dragStart: 0 });
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -84,6 +83,20 @@ export function HexViewBytes(props: HexViewBytesProps) {
         });
     }
 
+    const selection = React.useMemo(() => {
+        return {
+            isActive: localState.isDragging,
+            start: Math.min(state.selection.anchor, state.selection.drag), 
+            end: Math.max(state.selection.anchor, state.selection.drag) + 1
+        };
+    }, [localState.isDragging, state.selection]);
+
+    const textContent = React.useMemo(() => {
+            const numberOfLines = Math.ceil(props.data.length / 16);
+            return new Array(numberOfLines).fill(0)
+                .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
+                .join('\n')
+        }, [props.data]);
 
     return (
         <div    className="hexData"
@@ -100,25 +113,19 @@ export function HexViewBytes(props: HexViewBytesProps) {
                     onMouseUp={stopSelection}>
                 <HexViewHighlights
                     offset={props.offset}
-                    selection={{
-                        isActive: localState.isDragging,
-                        start: Math.min(state.selection.anchor, state.selection.drag), 
-                        end: Math.max(state.selection.anchor, state.selection.drag) + 1
-                    }}
+                    selection={selection}
                     adapter={highlightAdapter}
                     ></HexViewHighlights>
                 <div style={{
                     position: 'relative',
                     pointerEvents: 'none'
                 }}>{
-                    new Array(numberOfLines).fill(0)
-                    .map((_, i) => formatBytesLine(props.data.slice(i * 16, (i + 1) * 16 )))
-                    .join('\n')
+                    textContent
                 }</div>
             </div>
         </div>
     );
-}
+});
 
 function mapCoordinatesToOffset(x: number, y: number) {
     const line = Math.floor(y / lineHeight); 

@@ -1,4 +1,4 @@
-import { AnyElement } from '../parser/model';
+import { AnyElement, ParserDefinition } from '../parser/model';
 
 /**
  * Abstract Binary Tree - kind of an Abstract Syntax Tree (AST) but for binary files.
@@ -9,11 +9,11 @@ export interface BaseAbtNode<Type extends string> {
     start: number;
     end: number;
     children?: AbtNode[];
-    origin: AnyElement;
+    origin: AnyElement | ParserDefinition;
 }
 
 
-export type AbtNode = GenericAbtNode;
+export type AbtNode = GenericAbtNode | AbtRoot;
 
 /**
  * This is a placeholder node type to get the ball running on the UI side since I don't know
@@ -23,7 +23,7 @@ export interface GenericAbtNode extends BaseAbtNode<'generic'> {
     name: string;
 }
 
-export interface AbtRoot {
+export interface AbtRoot extends BaseAbtNode<'root'> {
     id: number;
     start: number;
     end: number;

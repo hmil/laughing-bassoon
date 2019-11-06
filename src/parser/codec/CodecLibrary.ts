@@ -1,24 +1,23 @@
 import { Codec } from './Codec';
-import { CodecModel } from '../model/core/CodecModel';
-import { CustomCodec } from './CustomCodec';
 
 export class CodecLibrary {
 
     private codecs: Map<string, Codec> = new Map();
 
-    public resolve(key: string | CodecModel | undefined): Codec | null {
+    public resolve(key: string | undefined): Codec | null {
         if (key === undefined) {
             return null;
         }
-        if (typeof key === 'string') {
-            const codec = this.codecs.get(key);
-            if (codec == null) {
-                throw new Error(`Unknown codec: ${key}`);
-            }
-            return codec;
-        }
 
-        return new CustomCodec(key);
+        const codec = this.codecs.get(key);
+        if (codec == null) {
+            throw new Error(`Unknown codec: ${key}`);
+        }
+        return codec;
+    }
+
+    public getAllCodecNames(): string[] {
+        return Array.from(this.codecs.keys());
     }
 
     public registerCodec(name: string, codec: Codec) {

@@ -1,7 +1,7 @@
-import { AbtNode, AbtRoot } from '../../../abt/Abt';
 import { Highlight } from './Highlight';
+import { AbtUITree } from 'ui/services/UIPresentationService';
 
-class HighlghtColorState {
+export class HighlghtColorState {
     h: number = 0;
 
     newColor(): string {
@@ -39,7 +39,7 @@ class HighlghtColorState {
     
 }
 
-export function abtToHighlights(abt: AbtNode | AbtRoot, state = new HighlghtColorState()): Highlight[] {
+export function abtToHighlights(abt: AbtUITree, state = new HighlghtColorState()): Highlight[] {
 
     const children = abt.children;
     if (children === undefined) {
@@ -48,9 +48,10 @@ export function abtToHighlights(abt: AbtNode | AbtRoot, state = new HighlghtColo
     return children.map<Highlight[]>(c => [
         {
             color: state.newColor(),
-            start: c.start,
-            end: c.end,
-            nodeId: c.id
+            start: c.node.start,
+            end: c.node.end,
+            nodeId: c.node.id,
+            hovered: c.hovered
         },
         ...abtToHighlights(c)
     ]).reduce((acc, curr) => acc.concat(curr), []);
