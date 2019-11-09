@@ -6,12 +6,21 @@ export interface TextInputProps {
     onChange?: (value: string) => void;
     onBlur?: () => void;
     style?: React.CSSProperties;
+    focus?: boolean;
 }
 
-export function TextInput(props: TextInputProps) {
+export const TextInput = React.memo(function _TextInput(props: TextInputProps) {
 
     const [value, setValue] = React.useState(props.value);
     let cancelled = false;
+
+    const ref = React.createRef<HTMLInputElement>();
+
+    React.useEffect(() => {
+        if (ref.current != null && props.focus === true) {
+            ref.current.focus();
+        }
+    }, [props.focus, ref.current])
 
     function onBlur() {
         if (props.onBlur) {
@@ -46,8 +55,9 @@ export function TextInput(props: TextInputProps) {
             ...props.style
         }}
         type="text"
+        ref={ref}
         value={value}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         onChange={evt => setValue(evt.target.value)} />
-}
+});

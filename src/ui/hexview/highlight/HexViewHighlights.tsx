@@ -1,12 +1,13 @@
+import { FileStructureNode } from 'ui/domain/structure/Structure';
 import * as React from 'react';
-import { HexViewContext } from '../Context';
-import { CHUNK_SIZE } from '../Config';
-import { AppContext } from '../../../state/AppContext';
-import { selectNode } from '../../../state/AppActions';
-import { UIPresentationServiceInjector, UIPresentationService, AbtUITree } from 'ui/services/UIPresentationService';
+import { AppActions } from 'ui/state/AppReducer';
 import { callback } from 'ui/react/hooks';
-import { AppActions } from 'state/AppState';
 import { If } from 'ui/react/tsx-helpers';
+
+import { hoverStructureNode, selectStructureNode } from 'ui/state/AppActions';
+import { AppContext } from 'ui/state/AppContext';
+import { CHUNK_SIZE } from '../Config';
+import { HexViewContext } from '../Context';
 
 
 const lineHeight = 15;
@@ -25,7 +26,7 @@ function highlightStyle(props: {
         position: 'absolute',
         borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
-        backgroundColor: `rgba(${props.color}, ${props.hover ? '0.35' : '0.25'})`,
+        backgroundColor: `rgba(${props.color}, ${props.hover ? '0.95' : '0.65'})`,
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
         top: `${props.top * lineHeight}px`,
@@ -43,18 +44,16 @@ interface HighlightProps {
     isActive: boolean;
     isSelected: boolean;
     adapter: HighlightAdapter;
-    id: number;
+    node: FileStructureNode;
 }
 
-const onEnterCallback = callback((uiService: UIPresentationService, id: number) => () => {
-    uiService.hoverNodes([id]);
+const onEnterCallback = callback((dispatch: React.Dispatch<AppActions>, node: FileStructureNode) => () => {
+    dispatch(hoverStructureNode(node));
 });
 
-const onClickCallback = callback((dispatch: React.Dispatch<AppActions>, id: number) => () => dispatch(selectNode({ids: [id]})));
+const onClickCallback = callback((dispatch: React.Dispatch<AppActions>, node: FileStructureNode) => () => dispatch(selectStructureNode(node)));
 
-const Highlight = React.memo(function _Highlight({ start, adapter, end, color, isActive, isSelected, id}: HighlightProps) {
-
-    const uiService = React.useContext(UIPresentationServiceInjector);
+const Highlight = React.memo(function _Highlight({ start, adapter, end, color, isActive, isSelected, node}: HighlightProps) {
     const appContext = React.useContext(AppContext);
 
     if (start >= end) {
@@ -83,8 +82,8 @@ const Highlight = React.memo(function _Highlight({ start, adapter, end, color, i
     }
 
     
-    const onMouseEnter = onEnterCallback(uiService, id);
-    const onClick = onClickCallback(appContext.dispatch, id);
+    const onMouseEnter = onEnterCallback(appContext.dispatch, node);
+    const onClick = onClickCallback(appContext.dispatch, node);
 
     const showActive = isSelected || isActive;
 
@@ -252,19 +251,19 @@ export interface HexViewHighlightsProps {
     offset: number;
 }
 
-export const RecursiveHighlight = React.memo(function _RecursiveHighlight(props: {abt: AbtUITree, offset: number, adapter: HighlightAdapter}) {
-    const node = props.abt.node;
+export const RecursiveHighlight = React.memo(function _RecursiveHighlight(props: {abt: FileStructureNode, offset: number, adapter: HighlightAdapter}) {
+    const node = props.abt;
     return <React.Fragment>
         <If cond={node.start < props.offset + CHUNK_SIZE && node.end > props.offset}>
-            <Highlight  id={node.id} 
-                        isSelected={false}
-                        isActive={props.abt.hovered} 
+            <Highlight  node={node} 
+                        isSelected={node.isSelected}
+                        isActive={node.isHovered} 
                         adapter={props.adapter} 
                         color={props.abt.color}
                         start={node.start - props.offset} 
                         end={node.end - props.offset}></Highlight>
             { props.abt.children.map(c => <RecursiveHighlight
-                    key={c.node.id}
+                    key={c.id}
                     abt={c}
                     offset={props.offset}
                     adapter={props.adapter}></RecursiveHighlight>)}
@@ -277,8 +276,8 @@ export const HexViewHighlights = React.memo(function _HexViewHighlights(props: H
     const { abt } = React.useContext(HexViewContext);
 
     return <div>
-        { abt.children.map(c => <RecursiveHighlight
-                    key={c.node.id}
+        { abt.root.children.map(c => <RecursiveHighlight
+                    key={c.id}
                     abt={c}
                     offset={props.offset}
                     adapter={props.adapter}></RecursiveHighlight>)}

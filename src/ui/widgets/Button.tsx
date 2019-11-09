@@ -15,7 +15,7 @@ const fontSizeChart = {
     'sm': '12px'
 }
 
-export function Button(props: ButtonProps) {
+export const Button = React.memo(function _Button(props: ButtonProps) {
     const size = props.size || 'md';
     return <button
         onClick={props.onClick}
@@ -27,4 +27,4 @@ export function Button(props: ButtonProps) {
             fontSize: fontSizeChart[size],
             ...props.style
         }}>{props.value}</button>;
-}
+});

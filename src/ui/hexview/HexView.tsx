@@ -4,14 +4,13 @@ import { Chunk } from './Chunk';
 import { hexViewReducer, hexViewInitialState } from './HexViewState';
 import { HexViewContext } from './Context';
 import { CHUNK_SIZE } from './Config';
-import { AbtUITree } from 'ui/services/UIPresentationService';
-
+import { FileStructure } from 'ui/domain/structure/Structure';
 
 interface HexViewProps {
     chunks: Chunk[];
     onRequestChunks: (chunks: number[]) => void;
     style?: React.CSSProperties;
-    abt: AbtUITree;
+    abt: FileStructure;
     // Total number of chunks
     nChunks: number;
 }
@@ -102,7 +101,8 @@ export function HexView(props: HexViewProps) {
                 // The purpose of this div is to hide the native scroll bar
                 overflow: 'hidden',
                 cursor: 'default',
-                height: '100%'
+                height: '100%',
+                color: '#ddd'
             }}>
                 <div    style={{
                             ...props.style,

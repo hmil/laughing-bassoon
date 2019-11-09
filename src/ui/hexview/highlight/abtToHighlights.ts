@@ -1,15 +1,15 @@
 import { Highlight } from './Highlight';
-import { AbtUITree } from 'ui/services/UIPresentationService';
+import { StructureUIStateTree } from 'ui/state/StructureUIState';
 
 export class HighlghtColorState {
     h: number = 0;
 
-    newColor(): string {
+    nextColor(): string {
         this.h = this.h + 0.05;
         if (this.h >= 1) {
             this.h -= 1;
         }
-        return this.hslToRgb(this.h, 1, 0.5);
+        return this.hslToRgb(this.h, 0.70, 0.38);
     }
 
     private hslToRgb(h: number, s: number, l: number){
@@ -39,7 +39,7 @@ export class HighlghtColorState {
     
 }
 
-export function abtToHighlights(abt: AbtUITree, state = new HighlghtColorState()): Highlight[] {
+export function abtToHighlights(abt: StructureUIStateTree, state = new HighlghtColorState()): Highlight[] {
 
     const children = abt.children;
     if (children === undefined) {
@@ -47,7 +47,7 @@ export function abtToHighlights(abt: AbtUITree, state = new HighlghtColorState()
     }
     return children.map<Highlight[]>(c => [
         {
-            color: state.newColor(),
+            color: state.nextColor(),
             start: c.node.start,
             end: c.node.end,
             nodeId: c.node.id,

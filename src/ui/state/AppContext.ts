@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { appInitialState, AppActions } from './AppState';
+import { appInitialState } from './AppState';
+import { AppActions } from './AppReducer';
 
 export const AppContext = React.createContext({
     state: appInitialState,

@@ -1,62 +1,34 @@
+import { GrammarTree } from 'ui/domain/grammar/Grammar';
 import * as React from 'react';
 
-import { Parser } from 'parser/Parser';
-
-import { AnyElement, ContainerField, ParserDefinition } from '../parser/model';
-import { uniqId } from '../parser/uid';
-import { hoverAbtNode, loadGrammar, loadParseTree, selectNode } from '../state/AppActions';
-import { AppContext } from '../state/AppContext';
-import { dumbFindNodes, findNodesByOrigin, AppActions, GrammarUiStateTree } from '../state/AppState';
-import { FixedFieldEditorHeader } from './editor/FixedFieldEditorHeader';
-import { RenderNodeProps, TreeView, TreeViewAdapter } from './widgets/TreeView';
+import { hoverGrammarNode, selectGrammarNode } from 'ui/state/AppActions';
+import { AppContext } from 'ui/state/AppContext';
+import { AppActions } from 'ui/state/AppReducer';
+import { ValueEditorHeader } from './editor/ValueEditorHeader';
+import { callback } from './react/hooks';
 import { TextInput } from './widgets/TextInput';
-import { useMemo, callback } from './react/hooks';
-import { AbtRoot } from 'abt/Abt';
+import { TreeView } from './widgets/TreeView';
 
-const idMap = new WeakMap<AnyElement | ParserDefinition, string>();
-
-function makeSyntheticRoot(nodes: AnyElement[]): ContainerField {
-    return {
-        content: nodes,
-        name: 'root',
-        type: 'container'
-    };
-}
+// const idMap = new WeakMap<GrammarTree, string>();
 
 export function GrammarViewer() {
 
     const { state, dispatch } = React.useContext(AppContext);
 
-    // const hoveredNodes = (() => {
-    //     if (state.abt == null) {
-    //         return [];
-    //     }
-    //     const nodes = dumbFindNodes(state.abt, state.hoveredNodes);
-        
-    //     return nodes.map(n => identifyNode(n.origin));
-    // })();
-
-    const selectedNodes = useMemo(computeSelectedNodes, [state.abt, state.selectedNodes]);
-
-    const onHover = onOverCallback(state.abt, dispatch);
+    const onHover = onOverCallback(dispatch);
     const onOut = onOutCallback(dispatch);
-    const onSelect = onSelectCallback(state.abt, dispatch);
-    const onChange = onChangeCallback(state.grammar, dispatch, state.fileData);
+    const onSelect = onSelectCallback(dispatch);
+    const renderHeader = renderHeaderCallback(state.availableCodecs, dispatch);
+    const grammar = state.grammar;
 
-    if (state.grammar != null && state.grammarUiState != null) {
-        const adapter = makeAdapter(makeSyntheticRoot(state.grammar.content), state.grammarUiState);
-    
+    if (grammar != null) {
         return <TreeView
-                    identify={identifyNode}
                     renderHeader={renderHeader}
                     renderBody={renderEditor}
-                    selectedNodes={selectedNodes}
                     onOver={onHover}
                     onOut={onOut}
                     onSelect={onSelect}
-                    setChild={setNodeChild}
-                    onChange={onChange}
-                    adapter={adapter}
+                    root={grammar.definition}
             ></TreeView>
     } else {
         return <div>No data</div>;
@@ -64,68 +36,46 @@ export function GrammarViewer() {
 
 }
 
-const onOverCallback = callback((abt: AbtRoot | null, dispatch: React.Dispatch<AppActions>) => 
-    (node: AnyElement) => {
-        const id = identifyNode(node);
-        if (abt == null) {
-            return;
-        }
+const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => dispatch(hoverGrammarNode(node)));
+const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => () => dispatch(hoverGrammarNode(null)));
+const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => dispatch(selectGrammarNode(node)));
 
-        const nodes = findNodesByOrigin(abt, id, identifyNode);
-        dispatch(hoverAbtNode({ids: nodes.map(n => n.id)}));
-    }
-);
+// const onChangeCallback = callback((grammar: Grammar | null, dispatch: React.Dispatch<AppActions>, fileData: Uint8Array | null) =>
+//     (syntheticRoot: AnyElement) => {
+//         if (grammar == null) {
+//             throw new Error('Grammar was null for some reason');
+//         }
+//         if (!('content' in syntheticRoot) || syntheticRoot.content == null) {
+//             throw new Error('no content in root');
+//         }
+//         console.log('changed');
+//         const newGrammar = {
+//             ...grammar,
+//             content: syntheticRoot.content
+//         };
+//         // dispatch(loadGrammar(newGrammar));
+//         if (fileData != null) {
+//             setImmediate(() => {
+//                 const parser = new Parser(newGrammar, fileData);
+//                 const tree = parser.parse();
+//                 dispatch(loadParseTree(tree));
+//             })
+//         }
+//     }
+// );
 
-const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => () => dispatch(hoverAbtNode({ids: []})));
+// function computeSelectedNodes(abt: AbtRoot | null, selectedNodes: number[]) {
+//     return () => {
+//         if (abt == null) {
+//             return [];
+//         }
+//         const nodes = dumbFindNodes(abt, selectedNodes);
 
-const onSelectCallback = callback((abt: AbtRoot | null, dispatch: React.Dispatch<AppActions>) => 
-    (node: AnyElement) => {
-        const id = identifyNode(node);
-        if (abt == null) {
-            return;
-        }
+//         return nodes.map(n => identifyNode(n.origin));
+//     };
+// }
 
-        const nodes = findNodesByOrigin(abt, id, identifyNode);
-        if (nodes.length > 0) {
-            dispatch(selectNode({ids: nodes.map(n => n.id)}));
-        }
-    }
-);
-
-const onChangeCallback = callback((grammar: ParserDefinition | null, dispatch: React.Dispatch<AppActions>, fileData: Uint8Array | null) =>
-    (syntheticRoot: AnyElement) => {
-        if (grammar == null) {
-            throw new Error('Grammar was null for some reason');
-        }
-        if (!('content' in syntheticRoot) || syntheticRoot.content == null) {
-            throw new Error('no content in root');
-        }
-        console.log('changed');
-        const newGrammar = {
-            ...grammar,
-            content: syntheticRoot.content
-        };
-        dispatch(loadGrammar(newGrammar));
-        if (fileData != null) {
-            const parser = new Parser(newGrammar, fileData);
-            const tree = parser.parse();
-            dispatch(loadParseTree(tree));
-        }
-    }
-);
-
-function computeSelectedNodes(abt: AbtRoot | null, selectedNodes: number[]) {
-    return () => {
-        if (abt == null) {
-            return [];
-        }
-        const nodes = dumbFindNodes(abt, selectedNodes);
-
-        return nodes.map(n => identifyNode(n.origin));
-    };
-}
-
-function renderEditor({node}: RenderNodeProps<AnyElement>) {
+function renderEditor(node: GrammarTree) {
     switch (node.type) {
         case 'repeat':
             return <div style={{
@@ -150,8 +100,8 @@ function renderEditor({node}: RenderNodeProps<AnyElement>) {
             return <div style={{
                 padding: "0 10px"
             }}>
-                <div>if <TextInput value={node.cond}/></div>
-                { node.then != null ? <div>
+                <div>if <TextInput value={node.condition}/></div>
+                { node.children != null ? <div>
                     then:
                     <div style={{
                             border: "1px #1a1a1a solid",
@@ -171,108 +121,73 @@ function renderEditor({node}: RenderNodeProps<AnyElement>) {
                             setChild={setNodeChild}></TreeView> */}
                     </div>
                 </div> : undefined }
-                { node.else != null ? <div>
-                    else:
-                    <div style={{
-                            border: "1px #1a1a1a solid",
-                            minHeight: "100px",
-                            padding: "3px"
-                    }}>
-                        {/* <TreeView
-                            root={makeSyntheticRoot(node.else)}
-                            identify={identifyNode}
-                            renderHeader={renderHeader}
-                            renderBody={renderEditor}
-                            hoveredNodes={hoveredNodes}
-                            selectedNodes={selectedNodes}
-                            onOver={onHover}
-                            onSelect={onSelect}
-                            getChildren={getNodeChildren}
-                            setChild={setNodeChild}></TreeView> */}
-                    </div>
-                </div> : undefined }
             </div>;
     }
     return undefined;
 }
 
-function makeAdapter(node: AnyElement, tree: GrammarUiStateTree): TreeViewAdapter<AnyElement> {
-    return {
-        getChildren() {
-            return useMemo(makeAdapterChildren, [node, tree]);
-        },
-        isHovered: false, // TODO: Performant hover feature
-        node
-    };
-}
+// const makeAdapter = memo((tree: GrammarUIStateTree | null) => () => {
+//     if (tree == null) {
+//         return null;
+//     }
+//     return (): TreeViewAdapter<AnyElement> => ({
+//         useChildren: makeAdapterChildren(tree.children),
+//         isHovered: tree.hovered,
+//         isSelected: false,
+//         node: tree.node
+//     });
+// });
 
-function makeAdapterChildren(node: AnyElement, tree: GrammarUiStateTree) {
-    return () => {
-        const children = getNodeChildren(node);
-        const hoverChildren = tree.children;
-        if (hoverChildren.length !== children.length) {
-            throw new Error('length dont match');
-        }
-        return children.map((n, i) => makeAdapter(n, hoverChildren[i]));
-    }
-}
+// const makeChildAdapter = memo((tree: GrammarUIStateTree) => () => {
+//     return (): TreeViewAdapter<AnyElement> => ({
+//         useChildren: makeAdapterChildren(tree.children),
+//         isHovered: tree.hovered,
+//         isSelected: false,
+//         node: tree.node
+//     });
+// });
 
-// TODO: Externalize renderer definition. Should not have element-specific switch-cases in here.
+// const makeAdapterChildren = callback((children: GrammarUIStateTree[]) => () => children.map(n => makeChildAdapter(n)));
 
+// function setNodeChild(parent: AnyElement, child: AnyElement, i: number): AnyElement {
+//     if ('content' in parent) {
+//         if (parent.content == null || parent.content.length <= i) {
+//             console.error('Cannot delete child in empty array');
+//             return parent;
+//         }
+//         return {
+//             ...parent,
+//             content: [ ...parent.content.slice(0, i), child, ...parent.content.slice(i + 1)]
+//         };
+//     }
 
-function getNodeChildren(node: AnyElement): AnyElement[] {
-    // TODO: Switch case
-    if ('content' in node) {
-        return node.content != null ? node.content : [];
-    }
+//     switch (parent.type) {
+//         case 'repeat':
+//             return {
+//                 ...parent,
+//                 do: [ ...parent.do.slice(0, i), child, ...parent.do.slice(i + 1)]
+//             };
+//     }
 
-    switch (node.type) {
-        case 'repeat':
-            return [...node.do];
-    }
-
-    return [];
-}
-
-function setNodeChild(parent: AnyElement, child: AnyElement, i: number): AnyElement {
-    if ('content' in parent) {
-        if (parent.content == null || parent.content.length <= i) {
-            console.error('Cannot delete child in empty array');
-            return parent;
-        }
-        return {
-            ...parent,
-            content: [ ...parent.content.slice(0, i), child, ...parent.content.slice(i + 1)]
-        };
-    }
-
-    switch (parent.type) {
-        case 'repeat':
-            return {
-                ...parent,
-                do: [ ...parent.do.slice(0, i), child, ...parent.do.slice(i + 1)]
-            };
-    }
-
-    return parent;
-}
+//     return parent;
+// }
 
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-function renderHeader({node, onChange}: RenderNodeProps<AnyElement>) {
+const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => {
     switch (node.type) {
-        case 'fixed':
-            return <FixedFieldEditorHeader value={node} onChange={onChange}></FixedFieldEditorHeader>
+        case 'value':
+            return <ValueEditorHeader value={node} availableCodecs={availableCodecs} dispatch={dispatch}></ValueEditorHeader>
         default:
-            return 'name' in node ? node.name : `<${node.type}>`;
+            return node.ref != null ? node.ref : `<${node.type}>`;
     }
-}
+});
 
-function identifyNode(node: AnyElement | ParserDefinition) {
-    let id = idMap.get(node);
-    if (id == null) {
-        id = `${uniqId()}`
-        idMap.set(node, id);
-    }
-    return `${id}`;
-}
+// function identifyNode(node: GrammarTree) {
+//     let id = idMap.get(node);
+//     if (id == null) {
+//         id = `${uniqId()}`
+//         idMap.set(node, id);
+//     }
+//     return `${id}`;
+// }

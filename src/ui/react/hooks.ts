@@ -12,6 +12,6 @@ export function callback<Params extends any[], Retn extends (...args: any[]) => 
     return (...args: Params) => React.useCallback(factory(...args), args);
 }
 
-export function memo<Params extends any[], Retn extends any>(factory: (...args: Params) => () => Retn) {
-    return (...args: Params): Retn => React.useMemo(factory(...args), args);
+export function memo<Params extends any[], Retn extends any>(factory: (...args: Params) => Retn) {
+    return (...args: Params): Retn => React.useMemo(() => factory(...args), args);
 }

@@ -1,5 +1,10 @@
 Main app
 
+
+TODO: Arch problems stem from lack of proper domain model
+Create a domain model suitable for the UI structure (eg. no ad-hoc conversions for the tree component)
+Create transforms to go from the DTO to the domain and back.
+
 ROADMAP:
 
 ## MVP
@@ -17,8 +22,3 @@ ROADMAP:
 ## Later
 
 - Text mode edition of grammars
-
-
-Performance notes:
-
-- use tree-like data structures whose unchanged branches are ref-equal. Pass this data structure down tree-like components. use React.memo to avoid re-renders.

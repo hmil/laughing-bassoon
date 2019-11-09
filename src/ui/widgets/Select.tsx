@@ -28,7 +28,7 @@ function SelectOption({value, onSelect}: { value: string, onSelect: (v: string) 
         }}>{value}</div>
 }
 
-export function Select(props: SelectProps) {
+export const Select = React.memo(function _Select(props: SelectProps) {
 
     const [state, setState] = React.useState(selectDefaultState);
 
@@ -83,4 +83,4 @@ export function Select(props: SelectProps) {
             {props.value}
         </div>
     </div>;
-}
+});
