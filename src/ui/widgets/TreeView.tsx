@@ -6,26 +6,19 @@ import { COLOR_HIGHLIGHT, COLOR_TEXT_HIGHLIGHT } from '../styles/colors';
 import { H_LINE_BOTTOM } from '../styles/relief';
 
 const treeViewDefaultState = {
-    hiddenNodes: [] as number[]
+    hiddenNodes: [] as (number | string)[]
 }
 
 function notImplemented(): never {
     throw new Error('Not implemented');
 }
 
-export interface TreeViewAdapter<T> {
-    isHovered: boolean;
-    isSelected: boolean;
-    node: T;
-    useChildren(): Array<() => TreeViewAdapter<T>>;
-}
-
 interface TreeViewContext<T> {
-    hiddenNodes: number[];
+    hiddenNodes: (number | string)[];
     onOver?: (node: T) => void;
     onOut?: (node: T) => void;
     onSelect?: (node: T) => void;
-    toggleNode: (id: number) => void;
+    toggleNode: (id: number | string) => void;
     renderHeader(node: T): string | JSX.Element;
     renderBody?: (node: T) => string | JSX.Element | undefined;
 }
@@ -36,7 +29,6 @@ const TreeViewContext = React.createContext<TreeViewContext<unknown>>({
     renderHeader: notImplemented,
 });
 
-// TODO: Many of these props should go in a context
 interface TreeNodeProps<T extends TreeElement<T>> {
     node: T;
     level: number;
@@ -47,7 +39,7 @@ function mouseInteractionCallback<T>(node: T, onEvent?: (node: T) => void) {
     return () => onEvent && onEvent(node);
 }
 
-function toggleNodeCallback(id: number, toggleNode: (id: number) => void) {
+function toggleNodeCallback(id: number | string, toggleNode: (id: number | string) => void) {
     return (evt: React.MouseEvent) => {
         if (evt.button !== 0) return;
         evt.stopPropagation();
@@ -127,7 +119,7 @@ const TreeNode = React.memo(function _TreeNode<T extends TreeElement<T>>(props: 
 
 export type TreeElement<T extends TreeElement<T>> = {
     readonly children: ReadonlyArray<T>;
-    readonly id: number;
+    readonly id: number | string;
     readonly isSelected: boolean;
     readonly isHovered: boolean;
 }
@@ -143,12 +135,12 @@ export interface TreeViewProps<T extends TreeElement<T>> {
 
 const makeTreeContext = memo(<T extends TreeElement<T>>(
         renderBody: TreeViewProps<T>['renderBody'],
-        hiddenNodes: number[],
+        hiddenNodes: (number | string)[],
         onOut: TreeViewProps<T>['onOut'],
         onOver: TreeViewProps<T>['onOver'],
         onSelect: TreeViewProps<T>['onSelect'],
         renderHeader: TreeViewProps<T>['renderHeader'],
-        toggleNode: (id: number) => void): TreeViewContext<T> => ({
+        toggleNode: (id: number | string) => void): TreeViewContext<T> => ({
     renderBody: renderBody,
     hiddenNodes: hiddenNodes,
     onOut: onOut,
@@ -161,7 +153,7 @@ const makeTreeContext = memo(<T extends TreeElement<T>>(
 export function TreeView<T extends TreeElement<T>>(props: TreeViewProps<T>) {
     const [state, setState] = React.useState(treeViewDefaultState);
 
-    const toggleNode = React.useCallback((id: number) => {
+    const toggleNode = React.useCallback((id: number | string) => {
         const currentNodes = state.hiddenNodes
         const index = currentNodes.indexOf(id);
         setState({

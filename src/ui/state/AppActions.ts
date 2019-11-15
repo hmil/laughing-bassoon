@@ -1,20 +1,16 @@
-import { Grammar, GrammarTree, updateGrammarNode, getGrammarNode } from 'ui/domain/grammar/Grammar';
+import { Parser } from 'parser/Parser';
+import { exportGrammar } from 'ui/domain/grammar/converters';
+import { Grammar, GrammarTree, updateGrammarNode } from 'ui/domain/grammar/Grammar';
+import { importStructure } from 'ui/domain/structure/converters';
+import { FileStructure, FileStructureNode } from 'ui/domain/structure/Structure';
+import { TreeViewNode, TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
+
 import { AppState } from './AppState';
-import { FileStructure, FileStructureNode, updateStructureNode, getStructureNode } from 'ui/domain/structure/Structure';
 
 export interface BaseAction<Type extends string, DATA> {
     type: Type;
     data: DATA;
 }
-
-function oldMakeAction<Type extends string, Data>(type: Type, data: Data): BaseAction<Type, Data> {
-    return { type, data };
-}
-
-export const loadFile = (data: Uint8Array) => oldMakeAction('loadFile', data);
-export const loadGrammar = (data: Grammar) => oldMakeAction('loadGrammar', data);
-export const requestChunks = (data: number[]) => oldMakeAction('requestChunks', data);
-export const setAvailableCodecs = (data: string[]) => oldMakeAction('setAvailableCodecs', data);
 
 interface ActionFactory<Type extends string, S, D> {
     (d: D): BaseAction<Type, D>;
@@ -27,77 +23,122 @@ function action<T extends string, S, D>(type: T, factory: (s: S, data: D) => S):
     return f;
 }
 
-export const loadStructure = action('loadStructure', (state: AppState, structure: FileStructure | null) => ({ ...state, structure }));
+function makeGrammarTree(grammar: Grammar): TreeViewState<GrammarTree> {
 
-export const hoverStructureNode = action('hoverStructureNode', (state: AppState, node: FileStructureNode | null) => {
-    if (state.structure == null || (node != null && state.hoveredStructureNode == node.path)) {
-        return state;
+    function rec(node: GrammarTree): TreeViewNode<GrammarTree> {
+        return {
+            children: node.children.map(rec),
+            data: node,
+            id: `${node.id}`
+        }
     }
-    let structure = state.structure;
-    if (node != null) {
-        structure = updateStructureNode(structure, node.path, { ...node, isHovered: true });
+
+    return TreeViewState.create(grammar.definition.children.map(rec));
+}
+
+function makeStructureTree(structure: FileStructure): TreeViewState<FileStructureNode> {
+
+    function rec(node: FileStructureNode): TreeViewNode<FileStructureNode> {
+        return {
+            children: node.children.map(rec),
+            data: node,
+            id: `${node.id}`
+        }
     }
-    if (state.hoveredStructureNode != null) {
-        const node = getStructureNode(structure, state.hoveredStructureNode);
-        structure = updateStructureNode(structure, state.hoveredStructureNode, { ...node, isHovered: false });
-    }
+
+    return TreeViewState.create(structure.root.children.map(rec));
+}
+
+export const loadFile = action('loadFile', (state: AppState, fileData: Uint8Array) => ({ ...state, fileData }));
+export const requestChunks = action('requestChunks', (state: AppState, activeChunks: number[]) => ({ ...state, activeChunks }));
+
+
+export const loadGrammar = action('loadGrammar', (state: AppState, data: Grammar) => (<AppState>{
+    ...state,
+    grammar: data,
+    grammarTree: makeGrammarTree(data)
+}));
+
+export const updateGrammarTree = action('updateGrammarTree', (state: AppState, grammarTree: TreeViewState<GrammarTree>) => ({
+    ...state,
+    grammarTree
+}));
+
+export const updateStructureTree = action('updateStructureTree', (state: AppState, structureTree: TreeViewState<FileStructureNode>) => ({
+    ...state,
+    structureTree
+}));
+
+export const setAvailableCodecs = action('setAvailableCodecs', (state: AppState, availableCodecs: string[]) => ({ ...state, availableCodecs }));
+
+export const loadStructure = action('loadStructure', (state: AppState, structure: FileStructure) => (<AppState>{
+    ...state,
+    structure,
+    structureTree: makeStructureTree(structure),
+    selectedStructureNode: null,
+    hoveredStructureNode: null
+}));
+
+export const hoverStructureNode = action('hoverStructureNode', (state: AppState, node: FileStructureNode) => {
     return {
         ...state,
-        hoveredStructureNode: node != null ? node.path : null,
-        structure
+        grammarTree: state.grammarTree.unhoverAll().hoverNode(`${node.origin}`),
+        structureTree: state.structureTree.unhoverAll().hoverNode(`${node.id}`)
     };
 });
 
 export const selectStructureNode = action('selectStructureNode', (state: AppState, node: FileStructureNode) => {
-    if (state.structure == null || state.selectedStructureNode === node.path) {
-        return state;
-    }
-    let structure = state.structure;
-    structure = updateStructureNode(structure, node.path, { ...node, isSelected: true });
-    if (state.selectedStructureNode != null) {
-        const node = getStructureNode(structure, state.selectedStructureNode);
-        structure = updateStructureNode(structure, state.selectedStructureNode, { ...node, isSelected: false });
-    }
     return {
         ...state,
-        selectedStructureNode: node.path,
-        structure
+        structureTree: state.structureTree.unselectAll().selectNode(`${node.id}`),
+        grammarTree: state.grammarTree.unselectAll().selectNode(`${node.origin}`)
     };
 });
 
-export const hoverGrammarNode = action('hoverGrammarNode', (state: AppState, node: GrammarTree | null) => {
+export const unhoverGrammarNode = action('unhoverGrammarNode', (state: AppState, _node: GrammarTree) => {
+    return {
+        ...state,
+        grammarTree: state.grammarTree.unhoverAll(),
+        structureTree: state.structureTree.unhoverAll()
+    }
+});
+
+export const unhoverStructureNode = action('unhoverStructureNode', (state: AppState, _node: FileStructureNode) => {
+    return {
+        ...state,
+        grammarTree: state.grammarTree.unhoverAll(),
+        structureTree: state.structureTree.unhoverAll()
+    }
+});
+
+export const hoverGrammarNode = action('hoverGrammarNode', (state: AppState, node: GrammarTree) => {
     if (state.grammar == null) {
         return state;
     }
-    let grammar = state.grammar;
-    if (node != null) {
-        grammar = updateGrammarNode(grammar, node.path, { ...node, isHovered: true });
-    }
-    if (state.hoveredGrammarNode != null) {
-        const node = getGrammarNode(grammar, state.hoveredGrammarNode);
-        grammar = updateGrammarNode(grammar, state.hoveredGrammarNode, { ...node, isHovered: false });
+    if (state.structure != null) {
+        const structureNodes = state.structure.indexByGrammarNode[node.id];
+        if (structureNodes != null) {
+            state = {...state, structureTree: state.structureTree.unhoverAll().hoverNodes(structureNodes.map(node => `${node.id}`))};
+        }
     }
     return {
         ...state,
         hoveredGrammarNode: node != null ? node.path : null,
-        grammar
+        grammarTree: state.grammarTree.unhoverAll().hoverNode(`${node.id}`)
     };
 });
 
 export const selectGrammarNode = action('selectGrammarNode', (state: AppState, node: GrammarTree) => {
-    if (state.grammar == null || state.selectedGrammarNode === node.path) {
-        return state;
-    }
-    let grammar = state.grammar;
-    grammar = updateGrammarNode(grammar, node.path, { ...node, isSelected: true });
-    if (state.selectedGrammarNode != null) {
-        const node = getGrammarNode(grammar, state.selectedGrammarNode);
-        grammar = updateGrammarNode(grammar, state.selectedGrammarNode, { ...node, isSelected: false });
+    if (state.structure != null) {
+        const structureNodes = state.structure.indexByGrammarNode[node.id];
+        if (structureNodes != null) {
+            state = {...state, structureTree: state.structureTree.unselectAll().selectNodes(structureNodes.map(node => `${node.id}`))};
+        }
     }
     return {
         ...state,
         selectedGrammarNode: node.path,
-        grammar
+        grammarTree: state.grammarTree.unselectAll().selectNode(`${node.id}`)
     };
 });
 
@@ -109,4 +150,16 @@ export const editGrammarNode = action('editGrammarNode', (state: AppState, node:
         ...state,
         grammar: updateGrammarNode(state.grammar, node.path, node)
     };
+});
+
+export const analyzeFile = action('analyzeFile', (state: AppState, _: undefined) => {
+    if (state.grammar == null || state.fileData == null) {
+        return state;
+    }
+    const { definition, backMapping } = exportGrammar(state.grammar);
+    const parser = new Parser(definition, state.fileData);
+    const tree = parser.parse();
+    state = loadStructure.reduce(state, importStructure(tree, backMapping));
+    state = setAvailableCodecs.reduce(state, parser.codecLibrary.getAllCodecNames());
+    return state;
 });

@@ -1,6 +1,6 @@
 import { ValueGrammarNode } from 'ui/domain/grammar/Grammar';
 import * as React from 'react';
-import { editGrammarNode } from 'ui/state/AppActions';
+import { analyzeFile, editGrammarNode } from 'ui/state/AppActions';
 import { AppActions } from 'ui/state/AppReducer';
 import { callback, memo } from 'ui/react/hooks';
 import { If } from 'ui/react/tsx-helpers';
@@ -31,7 +31,10 @@ interface ValueEditorHeaderProps {
     availableCodecs: string[];
 }
 
-const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ValueGrammarNode) => dispatch(editGrammarNode(elem)));
+const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ValueGrammarNode) => {
+    dispatch(editGrammarNode(elem));
+    dispatch(analyzeFile(undefined));
+});
 
 const onNameChangeCallback = callback((value: ValueGrammarNode, onChange: (elem: ValueGrammarNode) => void) =>
     (newName: string) => onChange({

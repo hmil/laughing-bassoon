@@ -8,6 +8,7 @@ import { hoverStructureNode, selectStructureNode } from 'ui/state/AppActions';
 import { AppContext } from 'ui/state/AppContext';
 import { CHUNK_SIZE } from '../Config';
 import { HexViewContext } from '../Context';
+import { TreeViewNode } from 'ui/widgets/tree-view/TreeViewState';
 
 
 const lineHeight = 15;
@@ -29,8 +30,8 @@ function highlightStyle(props: {
         backgroundColor: `rgba(${props.color}, ${props.hover ? '0.95' : '0.65'})`,
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
-        top: `${props.top * lineHeight}px`,
-        height: `${Math.max((props.bottom - props.top + 1) * lineHeight - 1, 0)}px`,
+        top: `${props.top * lineHeight + 1}px`,
+        height: `${Math.max((props.bottom - props.top + 1) * lineHeight, 0)}px`,
         ...(props.overflowTop ? {} : {borderTop: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`}),
         ...(props.overflowBottom ? {} : {borderBottom: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`}),
     }
@@ -41,10 +42,8 @@ interface HighlightProps {
     start: number;
     end: number;
     color: string;
-    isActive: boolean;
-    isSelected: boolean;
     adapter: HighlightAdapter;
-    node: FileStructureNode;
+    node: TreeViewNode<FileStructureNode>;
 }
 
 const onEnterCallback = callback((dispatch: React.Dispatch<AppActions>, node: FileStructureNode) => () => {
@@ -53,8 +52,12 @@ const onEnterCallback = callback((dispatch: React.Dispatch<AppActions>, node: Fi
 
 const onClickCallback = callback((dispatch: React.Dispatch<AppActions>, node: FileStructureNode) => () => dispatch(selectStructureNode(node)));
 
-const Highlight = React.memo(function _Highlight({ start, adapter, end, color, isActive, isSelected, node}: HighlightProps) {
+const Highlight = React.memo(function _Highlight({ start, adapter, end, color, node}: HighlightProps) {
     const appContext = React.useContext(AppContext);
+    const { abt } = React.useContext(HexViewContext);
+
+    const isSelected = abt.selectedNodes.indexOf(node.id) >= 0;
+    const isActive = abt.hoveredNodes.indexOf(node.id) >= 0;
 
     if (start >= end) {
         // Can't highlight something which has no width
@@ -82,8 +85,8 @@ const Highlight = React.memo(function _Highlight({ start, adapter, end, color, i
     }
 
     
-    const onMouseEnter = onEnterCallback(appContext.dispatch, node);
-    const onClick = onClickCallback(appContext.dispatch, node);
+    const onMouseEnter = onEnterCallback(appContext.dispatch, node.data);
+    const onClick = onClickCallback(appContext.dispatch, node.data);
 
     const showActive = isSelected || isActive;
 
@@ -251,18 +254,16 @@ export interface HexViewHighlightsProps {
     offset: number;
 }
 
-export const RecursiveHighlight = React.memo(function _RecursiveHighlight(props: {abt: FileStructureNode, offset: number, adapter: HighlightAdapter}) {
+export const RecursiveHighlight = React.memo(function _RecursiveHighlight(props: {abt: TreeViewNode<FileStructureNode>, offset: number, adapter: HighlightAdapter}) {
     const node = props.abt;
     return <React.Fragment>
-        <If cond={node.start < props.offset + CHUNK_SIZE && node.end > props.offset}>
-            <Highlight  node={node} 
-                        isSelected={node.isSelected}
-                        isActive={node.isHovered} 
+        <If cond={node.data.start < props.offset + CHUNK_SIZE && node.data.end >= props.offset}>
+            <Highlight  node={node}
                         adapter={props.adapter} 
-                        color={props.abt.color}
-                        start={node.start - props.offset} 
-                        end={node.end - props.offset}></Highlight>
-            { props.abt.children.map(c => <RecursiveHighlight
+                        color={node.data.color}
+                        start={node.data.start - props.offset} 
+                        end={node.data.end - props.offset}></Highlight>
+            { node.children.map(c => <RecursiveHighlight
                     key={c.id}
                     abt={c}
                     offset={props.offset}
@@ -276,7 +277,7 @@ export const HexViewHighlights = React.memo(function _HexViewHighlights(props: H
     const { abt } = React.useContext(HexViewContext);
 
     return <div>
-        { abt.root.children.map(c => <RecursiveHighlight
+        { abt.data.map(c => <RecursiveHighlight
                     key={c.id}
                     abt={c}
                     offset={props.offset}

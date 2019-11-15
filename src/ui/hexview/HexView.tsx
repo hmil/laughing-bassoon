@@ -4,13 +4,14 @@ import { Chunk } from './Chunk';
 import { hexViewReducer, hexViewInitialState } from './HexViewState';
 import { HexViewContext } from './Context';
 import { CHUNK_SIZE } from './Config';
-import { FileStructure } from 'ui/domain/structure/Structure';
+import { FileStructureNode } from 'ui/domain/structure/Structure';
+import { TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
 
 interface HexViewProps {
     chunks: Chunk[];
     onRequestChunks: (chunks: number[]) => void;
     style?: React.CSSProperties;
-    abt: FileStructure;
+    abt: TreeViewState<FileStructureNode>;
     // Total number of chunks
     nChunks: number;
 }

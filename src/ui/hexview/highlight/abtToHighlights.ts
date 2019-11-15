@@ -1,5 +1,3 @@
-import { Highlight } from './Highlight';
-import { StructureUIStateTree } from 'ui/state/StructureUIState';
 
 export class HighlghtColorState {
     h: number = 0;
@@ -37,22 +35,4 @@ export class HighlghtColorState {
         return p;
     }
     
-}
-
-export function abtToHighlights(abt: StructureUIStateTree, state = new HighlghtColorState()): Highlight[] {
-
-    const children = abt.children;
-    if (children === undefined) {
-        return [];
-    }
-    return children.map<Highlight[]>(c => [
-        {
-            color: state.nextColor(),
-            start: c.node.start,
-            end: c.node.end,
-            nodeId: c.node.id,
-            hovered: c.hovered
-        },
-        ...abtToHighlights(c)
-    ]).reduce((acc, curr) => acc.concat(curr), []);
 }

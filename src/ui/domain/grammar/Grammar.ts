@@ -1,8 +1,8 @@
-
 export interface Grammar {
     readonly mimeType: string;
     readonly codecs: Codec[];
     readonly definition: GrammarTree;
+    readonly indexById: Map<number, GrammarTree>;
 }
 
 export interface Codec {
@@ -16,8 +16,6 @@ export interface BaseGrammarNode<T extends string> {
     readonly type: T;
     readonly path: ReadonlyArray<number>;
     readonly id: number;
-    readonly isSelected: boolean;
-    readonly isHovered: boolean;
     readonly ref: string | undefined;
     readonly children: ReadonlyArray<GrammarTree>;
     // For faster search

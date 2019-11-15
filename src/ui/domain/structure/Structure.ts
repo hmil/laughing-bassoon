@@ -2,16 +2,15 @@
 export interface FileStructure {
     root: FileStructureNode;
     indexByGrammarNode: {
-        [k: number]: FileStructureNode;
+        [k: string]: ReadonlyArray<FileStructureNode> | undefined;
     };
+    readonly indexById: Map<number, FileStructureNode>;
 }
 
 export interface FileStructureNode {
     id: number;
     path: ReadonlyArray<number>;
     name: string;
-    isSelected: boolean;
-    isHovered: boolean;
     origin: number; // id of the grammar node causing this structure node
     children: ReadonlyArray<FileStructureNode>;
     childrenIndex: Map<number, FileStructureNode>;

@@ -1,20 +1,18 @@
 import { loadSchema } from 'library/loader';
 import { ParserDefinition } from 'parser/model';
-import { Parser } from 'parser/Parser';
 import * as React from 'react';
-
-import { loadFile, loadGrammar, requestChunks, setAvailableCodecs, loadStructure } from 'ui/state/AppActions';
+import { importGrammar } from 'ui/domain/grammar/converters';
+import { analyzeFile, loadFile, loadGrammar, requestChunks } from 'ui/state/AppActions';
 import { AppContext } from 'ui/state/AppContext';
+import { appReducer } from 'ui/state/AppReducer';
 import { appInitialState } from 'ui/state/AppState';
+
 import { GrammarViewer } from './ui/GrammarViewer';
-import { Chunk, CHUNK_SIZE, HexView, compareChunks } from './ui/hexview';
-import { SemanticViewer } from './ui/SemanticViewer';
+import { Chunk, CHUNK_SIZE, compareChunks, HexView } from './ui/hexview';
+import { StructureViewer } from './ui/StructureViewer';
 import { COLOR_TEXT_MAIN } from './ui/styles/colors';
 import { Toolbar } from './ui/Toolbar';
 import { Dock } from './ui/widgets/Dock';
-import { importGrammar } from 'ui/domain/grammar/converters';
-import { appReducer } from 'ui/state/AppReducer';
-import { importStructure } from 'ui/domain/structure/converters';
 
 
 export function App() {
@@ -29,7 +27,7 @@ export function App() {
 
         // Load some file
         var xhr = new XMLHttpRequest();
-        xhr.open('get', 'assets/archive.tar', true);
+        xhr.open('get', 'assets/archive2.tar', true);
         xhr.responseType = 'arraybuffer'
         xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -55,10 +53,7 @@ export function App() {
             if (data == null || schema == null) {
                 return;
             }
-            const parser = new Parser(schema, data);
-            const tree = parser.parse();
-            dispatch(loadStructure(importStructure(tree)));
-            dispatch(setAvailableCodecs(parser.codecLibrary.getAllCodecNames()));
+            dispatch(analyzeFile(undefined));
         }
     },
     // This tells react to run the effect only once:
@@ -98,7 +93,7 @@ export function App() {
                     backgroundColor: '#1d1d1d',
                 }}>
                     <Dock side="left" title="Structure">
-                        <SemanticViewer></SemanticViewer>
+                        <StructureViewer></StructureViewer>
                     </Dock>
                     <div style={{
                         flexGrow: 1,
@@ -106,14 +101,11 @@ export function App() {
                         width: '100px',
                         overflow: 'hidden'
                     }}>
-                        { state.structure != null
-                            ? <HexView 
-                                    nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0}
-                                    chunks={chunks}
-                                    abt={state.structure}
-                                    onRequestChunks={onRequestChunks} />
-                            : 'loading...'
-                        }
+                        <HexView 
+                            nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0}
+                            chunks={chunks}
+                            abt={state.structureTree}
+                            onRequestChunks={onRequestChunks} />
                     </div>
                     <Dock side="right" title="Grammar">
                         <GrammarViewer></GrammarViewer>

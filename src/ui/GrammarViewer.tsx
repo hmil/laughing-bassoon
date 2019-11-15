@@ -1,13 +1,13 @@
-import { GrammarTree } from 'ui/domain/grammar/Grammar';
 import * as React from 'react';
 
-import { hoverGrammarNode, selectGrammarNode } from 'ui/state/AppActions';
-import { AppContext } from 'ui/state/AppContext';
-import { AppActions } from 'ui/state/AppReducer';
-import { ValueEditorHeader } from './editor/ValueEditorHeader';
+import { TreeView } from './widgets/tree-view/TreeView';
+import { AppContext } from './state/AppContext';
+import { updateGrammarTree, hoverGrammarNode, unhoverGrammarNode, selectGrammarNode } from './state/AppActions';
 import { callback } from './react/hooks';
-import { TextInput } from './widgets/TextInput';
-import { TreeView } from './widgets/TreeView';
+import { AppActions } from './state/AppReducer';
+import { TreeViewNode } from './widgets/tree-view/TreeViewState';
+import { GrammarTree } from './domain/grammar/Grammar';
+import { ValueEditorHeader } from './editor/ValueEditorHeader';
 
 // const idMap = new WeakMap<GrammarTree, string>();
 
@@ -15,30 +15,37 @@ export function GrammarViewer() {
 
     const { state, dispatch } = React.useContext(AppContext);
 
-    const onHover = onOverCallback(dispatch);
+    const onOver = onOverCallback(dispatch);
     const onOut = onOutCallback(dispatch);
     const onSelect = onSelectCallback(dispatch);
     const renderHeader = renderHeaderCallback(state.availableCodecs, dispatch);
-    const grammar = state.grammar;
+    // const grammar = state.grammar2;
 
-    if (grammar != null) {
-        return <TreeView
-                    renderHeader={renderHeader}
-                    renderBody={renderEditor}
-                    onOver={onHover}
-                    onOut={onOut}
-                    onSelect={onSelect}
-                    root={grammar.definition}
-            ></TreeView>
-    } else {
-        return <div>No data</div>;
-    }
-
+    // if (grammar != null) {
+    //     // return <TreeView
+    //     //             renderHeader={renderHeader}
+    //     //             renderBody={renderEditor}
+    //     //             onOver={onHover}
+    //     //             onOut={onOut}
+    //     //             onSelect={onSelect}
+    //     //             root={grammar.definition.root}
+    //     //     ></TreeView>
+    // } else {
+    //     return <div>No data</div>;
+    // }
+    
+    return <TreeView 
+            state={state.grammarTree} 
+            onChange={(t) => dispatch(updateGrammarTree(t))}
+            renderHeader={renderHeader}
+            onOver={onOver}
+            onOut={onOut}
+            onSelect={onSelect} />;
 }
 
-const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => dispatch(hoverGrammarNode(node)));
-const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => () => dispatch(hoverGrammarNode(null)));
-const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => dispatch(selectGrammarNode(node)));
+const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(hoverGrammarNode(node.data)));
+const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(unhoverGrammarNode(node.data)));
+const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(selectGrammarNode(node.data)));
 
 // const onChangeCallback = callback((grammar: Grammar | null, dispatch: React.Dispatch<AppActions>, fileData: Uint8Array | null) =>
 //     (syntheticRoot: AnyElement) => {
@@ -75,56 +82,56 @@ const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (nod
 //     };
 // }
 
-function renderEditor(node: GrammarTree) {
-    switch (node.type) {
-        case 'repeat':
-            return <div style={{
-                padding: "0 10px"
-            }}>
-                repeat until:
-                <div style={{
-                        border: "1px #1a1a1a solid",
-                        minHeight: "100px",
-                        padding: "3px"
-                }}>
-                    {/* <TreeView
-                        root={makeSyntheticRoot(node.until)}
-                        identify={identifyNode}
-                        renderHeader={renderHeader}
-                        renderBody={renderEditor}
-                        getChildren={getNodeChildren}
-                        setChild={setNodeChild}></TreeView> */}
-                </div>
-            </div>;
-        case 'if':
-            return <div style={{
-                padding: "0 10px"
-            }}>
-                <div>if <TextInput value={node.condition}/></div>
-                { node.children != null ? <div>
-                    then:
-                    <div style={{
-                            border: "1px #1a1a1a solid",
-                            minHeight: "100px",
-                            padding: "3px"
-                    }}>
-                        {/* <TreeView
-                            root={makeSyntheticRoot(node.then)}
-                            identify={identifyNode}
-                            renderHeader={renderHeader}
-                            renderBody={renderEditor}
-                            hoveredNodes={hoveredNodes}
-                            selectedNodes={selectedNodes}
-                            onOver={onHover}
-                            onSelect={onSelect}
-                            getChildren={getNodeChildren}
-                            setChild={setNodeChild}></TreeView> */}
-                    </div>
-                </div> : undefined }
-            </div>;
-    }
-    return undefined;
-}
+// function renderEditor(node: GrammarTree) {
+//     switch (node.type) {
+//         case 'repeat':
+//             return <div style={{
+//                 padding: "0 10px"
+//             }}>
+//                 repeat until:
+//                 <div style={{
+//                         border: "1px #1a1a1a solid",
+//                         minHeight: "100px",
+//                         padding: "3px"
+//                 }}>
+//                     {/* <TreeView
+//                         root={makeSyntheticRoot(node.until)}
+//                         identify={identifyNode}
+//                         renderHeader={renderHeader}
+//                         renderBody={renderEditor}
+//                         getChildren={getNodeChildren}
+//                         setChild={setNodeChild}></TreeView> */}
+//                 </div>
+//             </div>;
+//         case 'if':
+//             return <div style={{
+//                 padding: "0 10px"
+//             }}>
+//                 <div>if <TextInput value={node.condition}/></div>
+//                 { node.children != null ? <div>
+//                     then:
+//                     <div style={{
+//                             border: "1px #1a1a1a solid",
+//                             minHeight: "100px",
+//                             padding: "3px"
+//                     }}>
+//                         {/* <TreeView
+//                             root={makeSyntheticRoot(node.then)}
+//                             identify={identifyNode}
+//                             renderHeader={renderHeader}
+//                             renderBody={renderEditor}
+//                             hoveredNodes={hoveredNodes}
+//                             selectedNodes={selectedNodes}
+//                             onOver={onHover}
+//                             onSelect={onSelect}
+//                             getChildren={getNodeChildren}
+//                             setChild={setNodeChild}></TreeView> */}
+//                     </div>
+//                 </div> : undefined }
+//             </div>;
+//     }
+//     return undefined;
+// }
 
 // const makeAdapter = memo((tree: GrammarUIStateTree | null) => () => {
 //     if (tree == null) {
@@ -174,12 +181,12 @@ function renderEditor(node: GrammarTree) {
 
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: GrammarTree) => {
-    switch (node.type) {
+const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => {
+    switch (node.data.type) {
         case 'value':
-            return <ValueEditorHeader value={node} availableCodecs={availableCodecs} dispatch={dispatch}></ValueEditorHeader>
+            return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch}></ValueEditorHeader>
         default:
-            return node.ref != null ? node.ref : `<${node.type}>`;
+            return node.data.ref != null ? node.data.ref : `<${node.data.type}>`;
     }
 });
 

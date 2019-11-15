@@ -98,8 +98,8 @@ class Thread {
         this.errorListeners.push(listener);
     }
 
-    log(msg: string) {
-        console.log(`[${this.id}] ${msg}`);
+    log(_msg: string) {
+        // console.log(`[${this.id}] ${msg}`);
     }
 
     private notifyError(err: string) {
@@ -403,11 +403,9 @@ export class Parser {
 
     public parse(): AbtRoot {
         const root: AbtRoot = {
-            type: 'root',
-            origin: this.definition,
+            id: uniqId(),
             start: 0,
             end: this.data.length,
-            id: uniqId(),
             children: [ ]
         };
 
