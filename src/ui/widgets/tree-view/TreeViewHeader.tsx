@@ -1,4 +1,4 @@
-import { TreeViewNode } from './TreeViewState';
+import { TreeViewModel } from './TreeViewState';
 import { memo, callback } from 'ui/react/hooks';
 import { COLOR_HIGHLIGHT, COLOR_TEXT_HIGHLIGHT } from 'ui/styles/colors';
 import * as React from 'react';
@@ -8,6 +8,7 @@ import { If } from 'ui/react/tsx-helpers';
 
 const TOGGLE_STYLE: React.CSSProperties = {
     paddingRight: '5px',
+    paddingTop: '6px',
     width: '18px',
     display: 'inline-block'
 };
@@ -26,8 +27,10 @@ const toggleHandler = callback((onToggle: () => void) => (evt: React.MouseEvent)
 
 const treeViewHeaderStyle = memo((padding: number, isSelected: boolean, hasHighlight: boolean): React.CSSProperties => ({
     // paddingRight > paddingLeft to leave space for an eventual sroll bar
-    padding: `6px 15px 6px ${padding + 5}px`,
+    padding: `0 15px 0 ${padding + 5}px`,
     cursor: 'default',
+    height: '30px',
+    whiteSpace: 'nowrap',
     backgroundColor: isSelected ? COLOR_HIGHLIGHT : hasHighlight ? '#ffffff10' : 'transparent',
     color: isSelected ? COLOR_TEXT_HIGHLIGHT : undefined,
 }));
@@ -37,8 +40,8 @@ interface TreeViewHeaderProps<T> {
     isSelected: boolean;
     hasHighlight: boolean;
     isExpanded: boolean;
-    renderHeader: (node: TreeViewNode<T>) => string | JSX.Element;
-    data: TreeViewNode<T>;
+    renderHeader: (node: TreeViewModel<T>) => string | JSX.Element;
+    data: TreeViewModel<T>;
     toggleNode: () => void;
     onOver: () => void;
     onOut: () => void;
@@ -52,7 +55,7 @@ export const TreeViewHeader = React.memo(function _TreeViewHeader<T>(props: Tree
         onMouseOut={props.onOut}
         onClick={props.onClick}
     >
-        <If cond={props.data.children.length > 0}>
+        <If cond={props.data.hasChildren}>
             <Toggle isExpanded={props.isExpanded} onToggle={props.toggleNode}/>
         </If>
         { props.renderHeader(props.data) }

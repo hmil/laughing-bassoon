@@ -1,14 +1,14 @@
 import * as React from 'react';
 
-import { TreeViewNode, TreeViewState } from './TreeViewState';
+import { TreeViewState, TreeViewModel } from './TreeViewState';
 
 export interface TreeViewContext<T> {
     state: TreeViewState<T>;
     onChange(state: TreeViewState<T>): void;
-    renderHeader(node: TreeViewNode<T>): string | JSX.Element;
-    onOver(node: TreeViewNode<T>): void;
-    onOut(node: TreeViewNode<T>): void;
-    onSelect(node: TreeViewNode<T>): void;
+    renderHeader(node: TreeViewModel<T>): string | JSX.Element;
+    onOver(node: TreeViewModel<T>): void;
+    onOut(node: TreeViewModel<T>): void;
+    onSelect(node: TreeViewModel<T>): void;
 }
 export const TreeViewContext = React.createContext<TreeViewContext<unknown>>({
     state: TreeViewState.createEmpty(),

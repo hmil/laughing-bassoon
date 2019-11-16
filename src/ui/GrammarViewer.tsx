@@ -5,7 +5,7 @@ import { AppContext } from './state/AppContext';
 import { updateGrammarTree, hoverGrammarNode, unhoverGrammarNode, selectGrammarNode } from './state/AppActions';
 import { callback } from './react/hooks';
 import { AppActions } from './state/AppReducer';
-import { TreeViewNode } from './widgets/tree-view/TreeViewState';
+import { TreeViewModel } from './widgets/tree-view/TreeViewState';
 import { GrammarTree } from './domain/grammar/Grammar';
 import { ValueEditorHeader } from './editor/ValueEditorHeader';
 
@@ -43,9 +43,9 @@ export function GrammarViewer() {
             onSelect={onSelect} />;
 }
 
-const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(hoverGrammarNode(node.data)));
-const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(unhoverGrammarNode(node.data)));
-const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => dispatch(selectGrammarNode(node.data)));
+const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(hoverGrammarNode(node.data)));
+const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(unhoverGrammarNode(node.data)));
+const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(selectGrammarNode(node.data)));
 
 // const onChangeCallback = callback((grammar: Grammar | null, dispatch: React.Dispatch<AppActions>, fileData: Uint8Array | null) =>
 //     (syntheticRoot: AnyElement) => {
@@ -181,7 +181,7 @@ const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (nod
 
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewNode<GrammarTree>) => {
+const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => {
     switch (node.data.type) {
         case 'value':
             return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch}></ValueEditorHeader>

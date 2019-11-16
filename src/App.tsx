@@ -104,7 +104,9 @@ export function App() {
                         <HexView 
                             nChunks={state.fileData != null ? state.fileData.length / CHUNK_SIZE : 0}
                             chunks={chunks}
-                            abt={state.structureTree}
+                            abt={state.structure}
+                            hoveredNodes={state.structureTree.hoveredNodes}
+                            selectedNodes={state.structureTree.selectedNodes}
                             onRequestChunks={onRequestChunks} />
                     </div>
                     <Dock side="right" title="Grammar">

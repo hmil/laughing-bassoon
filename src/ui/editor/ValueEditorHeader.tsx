@@ -103,7 +103,8 @@ export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, 
     return <div style={{
             display: 'flex',
             flexDirection: 'row',
-            alignItems: 'center'
+            alignItems: 'center',
+            height: '100%'
         }}>
             <If cond={editorState.editName === false}>
                 <div 
@@ -128,7 +129,7 @@ export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, 
                 {/* TODO: If value is an expression, flexGrow this field and align to the left. */}
                 <TextInput style={STYLE_SIZE_LABEL} value={value.size.value} onChange={onSizeChange}></TextInput>
             </div>
-            <div style={{marginRight: '5px', marginLeft: '1px', height: '100%', flexShrink: 0}}>
+            <div style={{marginRight: '5px', marginLeft: '1px', flexShrink: 0}}>
                 <Button style={STYLE_BIT_BUTTON} size='sm' value={isBits ? 'b' : 'B'} active={isBits} onClick={onToggleBitMode}></Button>
             </div>
             <div style={{width: '120px', margin: '0 5px', flexShrink: 0}}>

@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { hexViewInitialState, HexViewAction } from './HexViewState';
-import { FileStructureNode } from 'ui/domain/structure/Structure';
-import { TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
+import { FileStructure } from 'ui/domain/structure/Structure';
 
 export const HexViewContext = React.createContext({
     state: hexViewInitialState,
-    abt: TreeViewState.createEmpty<FileStructureNode>(),
+    hoveredNodes: [] as string[],
+    selectedNodes: [] as string[],
+    abt: null as FileStructure | null,
     // tslint:disable-next-line: no-useless-cast
     getCurrentScroll: () => 0 as number,
     dispatch: (_action: HexViewAction) => {

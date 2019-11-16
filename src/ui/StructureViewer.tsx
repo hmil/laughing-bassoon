@@ -6,12 +6,13 @@ import { hoverStructureNode, selectStructureNode, updateStructureTree, unhoverSt
 import { AppContext } from 'ui/state/AppContext';
 import { memo } from './react/hooks';
 import { TreeView } from './widgets/tree-view/TreeView';
-import { TreeViewNode } from './widgets/tree-view/TreeViewState';
+import { TreeViewModel } from './widgets/tree-view/TreeViewState';
+import { TreeViewLabel } from './widgets/tree-view/TreeViewLabel';
 
 const handlers = memo((dispatch: React.Dispatch<AppActions>) => ({
-    onOver: (node: TreeViewNode<FileStructureNode>) => dispatch(hoverStructureNode(node.data)),
-    onOut: (node: TreeViewNode<FileStructureNode>) => dispatch(unhoverStructureNode(node.data)),
-    onSelect: (node: TreeViewNode<FileStructureNode>) => dispatch(selectStructureNode(node.data)),
+    onOver: (node: TreeViewModel<FileStructureNode>) => dispatch(hoverStructureNode(node.data)),
+    onOut: (node: TreeViewModel<FileStructureNode>) => dispatch(unhoverStructureNode(node.data)),
+    onSelect: (node: TreeViewModel<FileStructureNode>) => dispatch(selectStructureNode(node.data)),
 }));
 
 export function StructureViewer() {
@@ -28,6 +29,8 @@ export function StructureViewer() {
     ></TreeView>
 }
 
-function renderHeader(node: TreeViewNode<FileStructureNode>) {
-    return 'name' in node.data && node.data.name || '';
+function renderHeader(node: TreeViewModel<FileStructureNode>) {
+    return <TreeViewLabel>
+        {'name' in node.data && node.data.name || ''}
+    </TreeViewLabel>
 }
