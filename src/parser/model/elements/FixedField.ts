@@ -8,7 +8,6 @@ import { BaseField } from './BaseField';
 export const FixedField = t.intersection([
     t.type({
         type: t.literal('fixed'),
-        name: t.string
     }),
     t.union([
         t.type({

@@ -1,11 +1,32 @@
 import { AbtNode, AbtRoot } from 'abt/Abt';
 
 import { FileStructure, FileStructureNode } from './Structure';
-import { HighlghtColorState } from 'ui/hexview/highlight/abtToHighlights';
 import { AnyElement } from 'parser/model';
 
+class ColorPalette {
+
+    private colors = [
+        '0, 113, 176',
+        '7, 80, 203',
+        '153, 0, 190',
+        '182, 0, 144',
+        '177, 9, 79',
+        '156, 61, 0',
+        '125, 84, 0',
+        '75, 101, 0',
+        '0, 113, 0',
+        '0, 121, 65',
+    ];
+
+    private id = 0;
+
+    public nextColor(): string {
+        return this.colors[this.id = (this.id + 1) % this.colors.length];
+    }
+}
+
 export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => number): FileStructure {
-    const colorMachine = new HighlghtColorState();
+    const colorMachine = new ColorPalette();
     const indexById = new Map<number, FileStructureNode>();
     const children = makeChildren(abt.children, backMapping, colorMachine, [abt.id], indexById);
     const root: FileStructureNode = {
@@ -28,7 +49,7 @@ export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => n
 }
 
 
-function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => number, colorMachine: HighlghtColorState, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
+function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => number, colorMachine: ColorPalette, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
         children: ReadonlyArray<FileStructureNode>,
         childrenIndex: Map<number, FileStructureNode>,
         byGrammarNode: {[k: string]: FileStructureNode[] }

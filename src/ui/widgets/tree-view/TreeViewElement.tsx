@@ -2,7 +2,8 @@ import * as React from 'react';
 
 import { TreeViewContext } from './TreeViewContext';
 import { TreeViewHeader } from './TreeViewHeader';
-import { TreeViewModel } from './TreeViewState';
+import { TreeViewModel, TreeViewState } from './TreeViewState';
+import { callback } from 'ui/react/hooks';
 
 interface TreeViewElementProps<T> {
     data: TreeViewModel<T>;
@@ -24,10 +25,15 @@ export function TreeViewElement<T>(props: TreeViewElementProps<T>) {
                 hasHighlight={isHovered}
                 isSelected={isSelected}
                 isExpanded={isExpanded}
-                onOver={() => onOver(props.data)}
-                onOut={() => onOut(props.data)}
-                onClick={() => onSelect(props.data)}
-                toggleNode={() => onChange(state.toggleNode(props.data.id))}
+                onOver={eventHandlerCallback(props.data, onOver)}
+                onOut={eventHandlerCallback(props.data, onOut)}
+                onClick={eventHandlerCallback(props.data, onSelect)}
+                toggleNode={toggleNodeCallback(state, props.data, onChange)}
                 padding={padding}  />
     </div>
 }
+
+const eventHandlerCallback = callback(function<T>(data: TreeViewModel<T>, handler: (data: TreeViewModel<T>) => void) { return () => handler(data) })
+const toggleNodeCallback = callback(function<T>(state: TreeViewState<T>, data: TreeViewModel<T>, onChange: (data: TreeViewState<T>) => void) {
+    return  () => onChange(state.toggleNode(data))
+});

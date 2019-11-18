@@ -7,10 +7,10 @@ export interface AppState {
     fileData: Uint8Array | null;
     activeChunks: number[];
     abt: AbtRoot | null;
-    hoveredNodes: number[];
     grammar: Grammar | null;
     availableCodecs: string[];
     structure: FileStructure | null;
+    fileName: string;
 
     grammarTree: TreeViewState<GrammarTree>;
     structureTree: TreeViewState<FileStructureNode>;
@@ -24,8 +24,8 @@ export interface AbtUiStateTree {
 
 export const appInitialState: AppState = {
     fileData: null,
+    fileName: '',
     activeChunks: [0, 1, 2],
-    hoveredNodes: [],
     grammar: null,
     abt: null,
     availableCodecs: [],

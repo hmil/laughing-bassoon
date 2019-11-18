@@ -5,7 +5,6 @@ import { allElements } from '.';
 export const ContainerField = t.intersection([
     t.type({
         type: t.literal('container'),
-        name: t.string
     }),
     t.partial({
         ref: t.string,

@@ -11,111 +11,108 @@ content:
   - type: repeat
     until:
       - type: container
-        name: end clearence
+        ref: end clearence
         content:
           - type: fixed
-            name: empty block
+            ref: empty block
             size: 512
             constraints:
               - type: isNull
           - type: fixed
-            name: empty block
+            ref: empty block
             size: 512
             constraints:
               - type: isNull
     do:
       - type: container
-        name: entry
+        ref: entry
         content:
         - type: container
-          name: header
-          ref: HEADER
+          ref: header
           size: 512
           content:
           - type: fixed
-            name: name
+            ref: name
             size: 100
             codec: cstring
           - type: fixed
-            name: mode
-            ref: MODE
+            ref: mode
             size: 8
             codec: octal
           - type: fixed
-            name: uid
-            size: 8
-            codec: cstring
-          - type: fixed
-            name: gid
+            ref: uid
             size: 8
             codec: cstring
           - type: fixed
-            name: size
-            ref: SIZE
+            ref: gid
+            size: 8
+            codec: cstring
+          - type: fixed
+            ref: size
             size: 12
             codec: octal
           - type: fixed
-            name: mtime
+            ref: mtime
             size: 12
             codec: octal
           - type: fixed
-            name: chksum
+            ref: chksum
             size: 8
             codec: octal
           - type: fixed
-            name: typeflag
+            ref: typeflag
             size: 1
           - type: fixed
-            name: linkname
+            ref: linkname
             size: 100
             codec: cstring
           - type: fixed
-            name: magic
+            ref: magic
             size: 6
             codec: cstring
           - type: fixed
-            name: version
+            ref: version
             size: 2
             codec: octal
           - type: fixed
-            name: uname
+            ref: uname
             size: 32
             codec: cstring
           - type: fixed
-            name: gname
+            ref: gname
             size: 32
             codec: cstring
           - type: fixed
-            name: devmajor
+            ref: devmajor
             size: 8
             codec: cstring
           - type: fixed
-            name: devminor
+            ref: devminor
             size: 8
             codec: cstring
           - type: fixed
-            name: prefix
+            ref: prefix
             size: 131
             codec: cstring
         - type: if
-          cond: "$HEADER/SIZE > 0"
+          cond: "$header/size > 0"
           then:
           - type: fixed
-            name: content
-            size: "$HEADER/SIZE"
+            ref: content
+            size: "$header/size"
           - type: fixed
-            name: padding
-            size: "512 - $HEADER/SIZE % 512"
+            ref: padding
+            size: "512 - $header/size % 512"
   - type: container
-    name: end clearence
+    ref: end clearence
     content:
       - type: fixed
-        name: empty block
+        ref: empty block
         size: 512
         constraints:
           - type: isNull
       - type: fixed
-        name: empty block
+        ref: empty block
         size: 512
         constraints:
           - type: isNull

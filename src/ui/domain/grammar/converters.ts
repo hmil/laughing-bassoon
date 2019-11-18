@@ -26,6 +26,10 @@ export function importGrammar(grammar: ParserDefinition): Grammar {
     };
 }
 
+function filterNulls<T>(t: T | null | undefined): t is T {
+    return t != null;
+}
+
 function importGrammarNode(prefix: ReadonlyArray<number>, indexById: Map<number, GrammarTree>) {
     return (content: AnyElement): GrammarTree => {
         const id = uniqId();
@@ -106,7 +110,7 @@ export function exportGrammar(grammar: Grammar): { definition: ParserDefinition,
             type: grammar.mimeType,
             endian: 'little',
             wordlength: 32,
-            content: grammar.definition.children.map(c => exportGrammarNode(c, backMapping))
+            content: grammar.definition.children.map(c => exportGrammarNode(c, backMapping)).filter(filterNulls)
         },
         backMapping: (el: AnyElement): number => {
             const ret = backMapping.get(el);
@@ -118,13 +122,12 @@ export function exportGrammar(grammar: Grammar): { definition: ParserDefinition,
     };
 }
 
-function _exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, number>): AnyElement {
+function _exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, number>): AnyElement | undefined {
     switch (node.type) {
         case 'container':
             return {
                 type: 'container',
-                content: node.children.length > 0 ? node.children.map(c => exportGrammarNode(c, backMapping)) : [],
-                name: node.ref || '<container>',
+                content: node.children.length > 0 ? node.children.map(c => exportGrammarNode(c, backMapping)).filter(filterNulls) : [],
                 ref: node.ref,
                 size: node.size == null ? undefined : node.size.value
             };
@@ -132,7 +135,6 @@ function _exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, numb
             return {
                 type: 'fixed',
                 codec: node.codec,
-                name: node.ref || '<fixed>',
                 ref: node.ref,
                 constraints: node.constraints,
                 ...exportSize(node.size)
@@ -141,22 +143,26 @@ function _exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, numb
             return {
                 type: 'if',
                 cond: node.condition,
-                then: node.children.map(c => exportGrammarNode(c, backMapping)),
+                then: node.children.map(c => exportGrammarNode(c, backMapping)).filter(filterNulls),
                 ref: node.ref
             };
         case 'repeat':
             return {
                 type: 'repeat',
-                until: node.until.map(c => exportGrammarNode(c, backMapping)),
-                do: node.children.map(c => exportGrammarNode(c, backMapping)),
+                until: node.until.map(c => exportGrammarNode(c, backMapping)).filter(filterNulls),
+                do: node.children.map(c => exportGrammarNode(c, backMapping)).filter(filterNulls),
                 ref: node.ref
             };
+        case 'trailer':
+            return undefined;
     }
 }
 
-function exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, number>): AnyElement {
+function exportGrammarNode(node: GrammarTree, backMapping: Map<AnyElement, number>): AnyElement | undefined {
     const exported = _exportGrammarNode(node, backMapping);
-    backMapping.set(exported, node.id);
+    if (exported != null) {
+        backMapping.set(exported, node.id);
+    }
     return exported;
 }   
 

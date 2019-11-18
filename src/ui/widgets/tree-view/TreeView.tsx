@@ -4,6 +4,7 @@ import { callback } from 'ui/react/hooks';
 import { TreeViewContext } from './TreeViewContext';
 import { TreeViewElement } from './TreeViewElement';
 import { TreeViewState, TreeViewModel } from './TreeViewState';
+import { H_LINE_BOTTOM } from 'ui/styles/relief';
 
 
 export interface TreeViewProps<T> {
@@ -57,10 +58,15 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                 <div style={{
                     position: 'absolute',
                     top: `${props.state.getYForNode(range.start)}px`,
-                    width: '100%'
+                    width: '100%',
+                    overflow: 'hidden'
                 }}>
                     { props.state.data.slice(range.start, range.end).map(d => {
-                        return <TreeViewElement data={d} key={d.id}/>
+                        if (d.type === 'spacer') {
+                            return <div style={H_LINE_BOTTOM}/>
+                        } else {
+                            return <TreeViewElement data={d} key={d.id}/>
+                        }
                     }) }
                 </div>
             </div>

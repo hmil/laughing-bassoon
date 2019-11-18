@@ -1,11 +1,12 @@
 import { Parser } from 'parser/Parser';
 import { exportGrammar } from 'ui/domain/grammar/converters';
-import { Grammar, GrammarTree, updateGrammarNode } from 'ui/domain/grammar/Grammar';
+import { Grammar, GrammarTree, updateGrammarNode, TrailerNode } from 'ui/domain/grammar/Grammar';
 import { importStructure } from 'ui/domain/structure/converters';
 import { FileStructure, FileStructureNode } from 'ui/domain/structure/Structure';
 import { TreeViewNode, TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
 
 import { AppState } from './AppState';
+import { uniqId } from 'parser/uid';
 
 export interface BaseAction<Type extends string, DATA> {
     type: Type;
@@ -23,11 +24,31 @@ function action<T extends string, S, D>(type: T, factory: (s: S, data: D) => S):
     return f;
 }
 
+function makeTrailer(): TreeViewNode<TrailerNode> {
+    const id = uniqId();
+    return {
+        id: `${id}`,
+        data: {
+            id,
+            children: [],
+            childrenIndex: new Map(),
+            path: [],
+            ref: '',
+            type: 'trailer'
+        },
+        children: []
+    };
+}
+
 function makeGrammarTree(grammar: Grammar): TreeViewState<GrammarTree> {
 
     function rec(node: GrammarTree): TreeViewNode<GrammarTree> {
+        let children = node.children.map(rec);
+        if (children.length > 0) {
+            children = children.concat([makeTrailer()]);
+        }
         return {
-            children: node.children.map(rec),
+            children,
             data: node,
             id: `${node.id}`
         }
@@ -49,7 +70,7 @@ function makeStructureTree(structure: FileStructure): TreeViewState<FileStructur
     return TreeViewState.create(structure.root.children.map(rec));
 }
 
-export const loadFile = action('loadFile', (state: AppState, fileData: Uint8Array) => ({ ...state, fileData }));
+export const loadFile = action('loadFile', (state: AppState, {fileData, fileName}: {fileData: Uint8Array, fileName: string}) => ({ ...state, fileData, fileName }));
 export const requestChunks = action('requestChunks', (state: AppState, activeChunks: number[]) => ({ ...state, activeChunks }));
 
 
@@ -146,9 +167,11 @@ export const editGrammarNode = action('editGrammarNode', (state: AppState, node:
     if (state.grammar == null) {
         return state;
     }
+    const grammar = updateGrammarNode(state.grammar, node.path, node);
     return {
         ...state,
-        grammar: updateGrammarNode(state.grammar, node.path, node)
+        grammar: grammar,
+        grammarTree: makeGrammarTree(grammar)
     };
 });
 

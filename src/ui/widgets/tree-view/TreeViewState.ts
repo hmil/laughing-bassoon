@@ -6,11 +6,18 @@ export interface TreeViewNode<T> {
 }
 
 export interface TreeViewModel<T> {
+    type: 'model';
     id: string;
     height: number;
     hasChildren: boolean;
     data: T;
+    children: Array<Spacer | TreeViewModel<T>>;
     level: number;
+}
+
+export interface Spacer {
+    type: 'spacer';
+    height: number;
 }
 
 export class TreeViewState<T> {
@@ -23,33 +30,42 @@ export class TreeViewState<T> {
         return new TreeViewState([], [], [], this.processNodes(data));
     }
 
-    private static processNodes<T>(data: TreeViewNode<T>[]): TreeViewModel<T>[] {
-        let res = new Array<TreeViewModel<T>>();
-
-        function rec(data: TreeViewNode<T>[], level: number) {
+    private static processNodes<T>(data: TreeViewNode<T>[]): Array<Spacer | TreeViewModel<T>> {
+        function rec(data: TreeViewNode<T>[], level: number): Array<Spacer | TreeViewModel<T>> {
+            let res = new Array<Spacer | TreeViewModel<T>>();
             data.forEach(value => {
+                let children: Array<Spacer | TreeViewModel<T>> = [];
+                if (value.children.length > 0) {
+                    children = rec(value.children, level + 1);
+                }
                 res.push({
                     id: value.id,
                     height: 30,
                     data: value.data,
                     hasChildren: value.children.length > 0,
-                    level
+                    level,
+                    children,
+                    type: 'model'
                 });
-                if (value.children.length > 0) {
-                    rec(value.children, level + 1);
-                }
+                res.push(...children);
             });
-        }
+            if (res.length === 0 || res[res.length - 1].type !== 'spacer') {
+                res.push({
+                    type: 'spacer',
+                    height: 1
+                });
+            }
 
-        rec(data, 0);
-        return res;
+            return res;
+        }
+        return rec(data, 0);
     }
 
     private constructor(
             public readonly hoveredNodes: string[],
             public readonly selectedNodes: string[],
             public readonly collapsedNodes: string[],
-            public readonly data: TreeViewModel<T>[]) {}
+            public readonly data: Array<Spacer | TreeViewModel<T>>) {}
 
     // TODO: The state must be flattened in order to compute the actual height and render partial children etc...
     public get totalHeight(): number {
@@ -162,13 +178,47 @@ export class TreeViewState<T> {
         );
     }
 
-    public toggleNode(node: string): TreeViewState<T> {
-        const idx = this.collapsedNodes.indexOf(node);
+    public toggleNode(node: TreeViewModel<T>): TreeViewState<T> {
+        const idx = this.collapsedNodes.indexOf(node.id);
+        const isExpanded = idx < 0;
+
+        let data = this.data;
+
+        let indexStart = -1;
+        let indexEnd = -1;
+
+        for (let i = 0 ; i < this.data.length ; i++) {
+            const model = this.data[i];
+            if (model.type === 'model' && model.id === node.id) {
+                indexStart = i + 1;
+                break;
+            }
+        }
+
+        if (isExpanded) {
+            for (let i = indexStart ; i < this.data.length ; i++) {
+                const model = this.data[i];
+                if (model.type === 'model' && model.level <= node.level) {
+                    indexEnd = i;
+                    break;
+                }
+            }
+    
+            if (indexStart >= 0 && indexEnd >= 0) {
+                data = [...this.data.slice(0, indexStart), ...this.data.slice(indexEnd)];
+            }
+        } else {
+            if (indexStart >= 0) {
+                data = [...this.data.slice(0, indexStart), ...node.children, ...this.data.slice(indexStart)];
+            }
+        }
+
+
         return new TreeViewState(
             this.hoveredNodes,
             this.selectedNodes,
-            idx >= 0 ? arrayRemove(this.collapsedNodes, idx) : [...this.collapsedNodes, node],
-            this.data
+            isExpanded ? [...this.collapsedNodes, node.id] : arrayRemove(this.collapsedNodes, idx),
+            data
         );
     }
 }

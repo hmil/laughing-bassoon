@@ -33,6 +33,7 @@ const treeViewHeaderStyle = memo((padding: number, isSelected: boolean, hasHighl
     whiteSpace: 'nowrap',
     backgroundColor: isSelected ? COLOR_HIGHLIGHT : hasHighlight ? '#ffffff10' : 'transparent',
     color: isSelected ? COLOR_TEXT_HIGHLIGHT : undefined,
+    display: 'flex'
 }));
 
 interface TreeViewHeaderProps<T> {
@@ -58,6 +59,8 @@ export const TreeViewHeader = React.memo(function _TreeViewHeader<T>(props: Tree
         <If cond={props.data.hasChildren}>
             <Toggle isExpanded={props.isExpanded} onToggle={props.toggleNode}/>
         </If>
-        { props.renderHeader(props.data) }
+        <div style={{ flexGrow: 1}}>
+            { props.renderHeader(props.data) }
+        </div>
     </div>;
 });

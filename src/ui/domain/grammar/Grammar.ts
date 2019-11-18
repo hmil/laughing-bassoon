@@ -45,7 +45,13 @@ export interface IfGrammarNode extends BaseGrammarNode<'if'> {
     readonly condition: string;
 }
 
-export type GrammarTree = ValueGrammarNode | ContainerGrammarNode | RepeatGrammarNode | IfGrammarNode;
+/**
+ * Placed at the end of the children list of a container for actions & style
+ */
+export interface TrailerNode extends BaseGrammarNode<'trailer'> {
+}
+
+export type GrammarTree = ValueGrammarNode | ContainerGrammarNode | RepeatGrammarNode | IfGrammarNode | TrailerNode;
 
 
 export function updateGrammarNode(tree: Grammar, path: ReadonlyArray<number>, replacement: GrammarTree): Grammar {

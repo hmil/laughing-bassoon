@@ -6,7 +6,6 @@ import { allElements } from '.';
 const Flag = t.intersection([
     t.type({
         target: t.string, // TODO: allow refs
-        name: t.string
     }),
     t.partial({
         ref: t.string,

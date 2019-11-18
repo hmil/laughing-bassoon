@@ -25,15 +25,17 @@ export function App() {
         let data: Uint8Array | null = null;
         let schema: ParserDefinition | null = null;
 
+        const fileName = 'assets/archive2.tar';
+
         // Load some file
         var xhr = new XMLHttpRequest();
-        xhr.open('get', 'assets/archive2.tar', true);
+        xhr.open('get', fileName, true);
         xhr.responseType = 'arraybuffer'
         xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
                     data = new Uint8Array(xhr.response);
-                    dispatch(loadFile(data));
+                    dispatch(loadFile({fileData: data, fileName: fileName}));
                     parseFile();
                 }
             }
@@ -84,7 +86,7 @@ export function App() {
                 fontFamily: 'sans-serif',
                 justifyContent: 'space-between'
             }}>
-                <Toolbar />
+                <Toolbar title={`${state.fileName} — FileForge`}/>
                 <div style={{
                     display: 'flex',
                     flexDirection: 'row',

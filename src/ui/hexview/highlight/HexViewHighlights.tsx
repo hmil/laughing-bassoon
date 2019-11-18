@@ -26,7 +26,7 @@ function highlightStyle(props: {
         position: 'absolute',
         borderLeft: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
         borderRight: `1px solid rgba(${props.color}, ${props.hover ? 1 : 0.4})`,
-        backgroundColor: `rgba(${props.color}, ${props.hover ? '0.95' : '0.65'})`,
+        backgroundColor: `rgba(${props.color}, ${props.hover ? '0.7' : '0.5'})`,
         left: `calc(${props.left}ch - 1px)`,
         width: `calc(${props.width}ch + 1px)`,
         top: `${props.top * lineHeight + 1}px`,
@@ -80,7 +80,7 @@ const Highlight = React.memo(function _Highlight({ start, adapter, end, color, n
     }
 
     if (isSelected) {
-        color = '255, 211, 0';
+        color = '183, 151, 0';
     }
 
     

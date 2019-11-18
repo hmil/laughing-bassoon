@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { H_LINE_BOTTOM } from '../styles/relief';
+import { COLOR_BG_2 } from 'ui/styles/colors';
 
 export interface DockProps {
     side: 'left' | 'right';
@@ -41,7 +42,7 @@ export function Dock(props: React.PropsWithChildren<DockProps>) {
     return <div ref={dockRef} style={{
         width: `${width}px`,
         position: 'relative',
-        backgroundColor: '#2f2f2f',
+        backgroundColor: COLOR_BG_2,
         boxShadow: 'rgba(255, 255, 255, 0.09) 0 1px 1px 0px inset, #00000047 0 2px 4px 1px',
         zIndex: 200,
         marginTop: '2px',
@@ -66,8 +67,7 @@ export function Dock(props: React.PropsWithChildren<DockProps>) {
                 ...H_LINE_BOTTOM
             }}>{props.title}</h2>
         <div style={{
-            height: "100%",
-            flexShrink: 1,
+            flexGrow: 1,
             overflow: "auto"
         }}>
             {props.children}

@@ -152,12 +152,11 @@ export class Parser {
     }
 
     private processFixed(elem: FixedField, thread: Thread): void {
-        thread.log(`Fixed: ${elem.name}`);
         if ('bitSize' in elem) { // TODO: handle bit size
             throw new Error('Bit sizing not yet supported');
         }
 
-        let name = elem.name;
+        let name = elem.ref || '<field>';
 
         this.resolveExpression(thread.context, this.scopeTree.getScopeForNode(elem), elem.size, size => {
             if (size == null) {
@@ -198,7 +197,6 @@ export class Parser {
                         },
                         value => {
                             if (elem.ref != null) {
-                                name += ` (${elem.ref})`;
                                 if (typeof value === 'number' && !isNaN(value)) {
                                     this.provideVariable(thread.context, this.scopeTree.getScopeForNode(elem), elem.ref, value);
                                 }
@@ -224,7 +222,7 @@ export class Parser {
     }
 
     private processContainer(elem: ContainerField, thread: Thread): void {
-        thread.log(`Container: ${elem.name}`);
+        thread.log(`Container: ${elem.ref}`);
 
         const id = uniqId();
         const endVariable = `system.container@${id}.end`;
@@ -266,7 +264,7 @@ export class Parser {
                     id: uniqId(),
                     start: thread.offset.offset,
                     end: thread.offset.offset + size,
-                    name: elem.name,
+                    name: elem.ref || '<container>',
                     children,
                     origin: elem
                 });
@@ -295,7 +293,7 @@ export class Parser {
                     id: uniqId(),
                     start: thread.offset.offset,
                     end: end,
-                    name: elem.name,
+                    name: elem.ref || '<container>',
                     children,
                     origin: elem
                 });
