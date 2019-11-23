@@ -1,7 +1,6 @@
 import { loadSchema } from 'library/loader';
 import { ParserDefinition } from 'parser/model';
 import * as React from 'react';
-import { importGrammar } from 'ui/domain/grammar/converters';
 import { analyzeFile, loadFile, loadGrammar, requestChunks } from 'ui/state/AppActions';
 import { AppContext } from 'ui/state/AppContext';
 import { appReducer } from 'ui/state/AppReducer';
@@ -13,6 +12,7 @@ import { StructureViewer } from './ui/StructureViewer';
 import { COLOR_TEXT_MAIN } from './ui/styles/colors';
 import { Toolbar } from './ui/Toolbar';
 import { Dock } from './ui/widgets/Dock';
+import { Grammar } from 'ui/domain/grammar/Grammar';
 
 
 export function App() {
@@ -46,7 +46,7 @@ export function App() {
         loadSchema('assets/tar.yml')
             .then(s => {
                 schema = s;
-                dispatch(loadGrammar(importGrammar(s)));
+                dispatch(loadGrammar(Grammar.importFromParser(s)));
                 parseFile();
             })
             .catch(e => console.error(e));

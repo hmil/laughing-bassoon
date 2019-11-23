@@ -11,7 +11,7 @@ export interface FileStructureNode {
     id: number;
     path: ReadonlyArray<number>;
     name: string;
-    origin: number; // id of the grammar node causing this structure node
+    origin: string; // id of the grammar node causing this structure node
     children: ReadonlyArray<FileStructureNode>;
     childrenIndex: Map<number, FileStructureNode>;
     start: number;

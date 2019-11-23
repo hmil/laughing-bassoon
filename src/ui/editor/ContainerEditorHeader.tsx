@@ -1,4 +1,4 @@
-import { ContainerGrammarNode } from 'ui/domain/grammar/Grammar';
+import { ContainerGrammarElement } from 'ui/domain/grammar/Grammar';
 import * as React from 'react';
 import { analyzeFile, editGrammarNode } from 'ui/state/AppActions';
 import { AppActions } from 'ui/state/AppReducer';
@@ -8,22 +8,24 @@ import { Button } from 'ui/widgets/Button';
 import { TextInput } from 'ui/widgets/TextInput';
 
 interface ContainerEditorHeaderProps {
-    value: ContainerGrammarNode;
+    value: ContainerGrammarElement;
     dispatch: React.Dispatch<AppActions>;
 }
 
-const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ContainerGrammarNode) => {
+const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ContainerGrammarElement) => {
     dispatch(editGrammarNode(elem));
-    dispatch(analyzeFile(undefined));
+    setTimeout(() => {
+        dispatch(analyzeFile(undefined));
+    }, 0);
 });
 
-const onNameChangeCallback = callback((value: ContainerGrammarNode, onChange: (elem: ContainerGrammarNode) => void) =>
+const onNameChangeCallback = callback((value: ContainerGrammarElement, onChange: (elem: ContainerGrammarElement) => void) =>
     (newName: string) => onChange({
         ...value,
         ref: newName
     })
 );
-const onSizeChangeCallback = callback((value: ContainerGrammarNode, onChange: (elem: ContainerGrammarNode) => void) =>
+const onSizeChangeCallback = callback((value: ContainerGrammarElement, onChange: (elem: ContainerGrammarElement) => void) =>
     (newSize: string) => {
         const newValue = {
             ...value

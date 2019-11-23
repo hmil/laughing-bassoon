@@ -25,7 +25,7 @@ class ColorPalette {
     }
 }
 
-export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => number): FileStructure {
+export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => string): FileStructure {
     const colorMachine = new ColorPalette();
     const indexById = new Map<number, FileStructureNode>();
     const children = makeChildren(abt.children, backMapping, colorMachine, [abt.id], indexById);
@@ -37,7 +37,7 @@ export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => n
         id: 0,
         end: 0,
         name: 'root',
-        origin: 0,
+        origin: 'null',
         start: 0
     };
     indexById.set(0, root);
@@ -49,7 +49,7 @@ export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => n
 }
 
 
-function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => number, colorMachine: ColorPalette, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
+function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => string, colorMachine: ColorPalette, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
         children: ReadonlyArray<FileStructureNode>,
         childrenIndex: Map<number, FileStructureNode>,
         byGrammarNode: {[k: string]: FileStructureNode[] }

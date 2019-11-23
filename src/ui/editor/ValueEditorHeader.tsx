@@ -1,4 +1,3 @@
-import { ValueGrammarNode } from 'ui/domain/grammar/Grammar';
 import * as React from 'react';
 import { analyzeFile, editGrammarNode } from 'ui/state/AppActions';
 import { AppActions } from 'ui/state/AppReducer';
@@ -8,6 +7,7 @@ import { Button } from 'ui/widgets/Button';
 import { TextInput } from 'ui/widgets/TextInput';
 
 import { Select } from '../widgets/Select';
+import { ValueGrammarElement } from 'ui/domain/grammar/Grammar';
 
 function codecAsString(codec: string | undefined): string {
     if (codec == null) {
@@ -26,23 +26,25 @@ function stringAsCodec(value: string): string | undefined {
 }
 
 interface ValueEditorHeaderProps {
-    value: ValueGrammarNode;
+    value: ValueGrammarElement;
     dispatch: React.Dispatch<AppActions>;
     availableCodecs: string[];
 }
 
-const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ValueGrammarNode) => {
+const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ValueGrammarElement) => {
     dispatch(editGrammarNode(elem));
-    dispatch(analyzeFile(undefined));
+    setTimeout(() => {
+        dispatch(analyzeFile(undefined));
+    }, 0);
 });
 
-const onNameChangeCallback = callback((value: ValueGrammarNode, onChange: (elem: ValueGrammarNode) => void) =>
+const onNameChangeCallback = callback((value: ValueGrammarElement, onChange: (elem: ValueGrammarElement) => void) =>
     (newName: string) => onChange({
         ...value,
         ref: newName
     })
 );
-const onSizeChangeCallback = callback((value: ValueGrammarNode, onChange: (elem: ValueGrammarNode) => void) =>
+const onSizeChangeCallback = callback((value: ValueGrammarElement, onChange: (elem: ValueGrammarElement) => void) =>
     (newSize: string) => onChange({
         ...value,
         size: {
@@ -73,7 +75,6 @@ const STYLE_BIT_BUTTON: React.CSSProperties = {
 
 export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, dispatch, availableCodecs}: ValueEditorHeaderProps) {
 
-    // const { state, dispatch } = React.useContext(AppContext);
     const [ editorState, setEditorState ] = React.useState({ editName: false });
 
     const onChange = onChangeCallback(dispatch);
@@ -110,6 +111,7 @@ export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, 
                 <div 
                     onDoubleClick={onStartEditName}
                     style={{
+                        cursor: 'text',
                         flexGrow: 1
                     }}>
                     {value.ref || '<value>'} 

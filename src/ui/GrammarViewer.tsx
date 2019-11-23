@@ -1,18 +1,26 @@
 import * as React from 'react';
 
-import { TreeView } from './widgets/tree-view/TreeView';
-import { AppContext } from './state/AppContext';
-import { updateGrammarTree, hoverGrammarNode, unhoverGrammarNode, selectGrammarNode } from './state/AppActions';
-import { callback } from './react/hooks';
-import { AppActions } from './state/AppReducer';
-import { TreeViewModel } from './widgets/tree-view/TreeViewState';
-import { GrammarTree } from './domain/grammar/Grammar';
-import { ValueEditorHeader } from './editor/ValueEditorHeader';
+import { GrammarElement } from './domain/grammar/Grammar';
 import { ContainerEditorHeader } from './editor/ContainerEditorHeader';
-import { TreeViewLabel } from './widgets/tree-view/TreeViewLabel';
+import { ValueEditorHeader } from './editor/ValueEditorHeader';
+import { callback } from './react/hooks';
+import {
+    analyzeFile,
+    createGrammarNode,
+    deleteGrammarNode,
+    hoverGrammarNode,
+    selectGrammarNode,
+    unhoverGrammarNode,
+    updateGrammarTree,
+} from './state/AppActions';
+import { AppContext } from './state/AppContext';
+import { AppActions } from './state/AppReducer';
+import { COLOR_BG_3, COLOR_BG_4 } from './styles/colors';
 import { H_LINE_BOTTOM } from './styles/relief';
 import { Button } from './widgets/Button';
-import { COLOR_BG_3, COLOR_BG_4 } from './styles/colors';
+import { TreeView } from './widgets/tree-view/TreeView';
+import { TreeViewLabel } from './widgets/tree-view/TreeViewLabel';
+import { TreeViewModel } from './widgets/tree-view/TreeViewState';
 
 export function GrammarViewer() {
 
@@ -39,6 +47,23 @@ export function GrammarViewer() {
                     renderHeader={renderHeader}
                     onOver={onOver}
                     onOut={onOut}
+                    onRequestDrag={onRequestDrag}
+                    onDrop={(node, position, parent) => {
+                        if (state.grammar != null) {
+                            if (parent != null) {
+                                console.log(position);
+                                dispatch(deleteGrammarNode(node.data));
+                                dispatch(createGrammarNode({
+                                    parent: parent.data,
+                                    position,
+                                    defaultProps: node.data
+                                }));
+                                setTimeout(() => {
+                                    dispatch(analyzeFile(undefined));
+                                }, 0);
+                            }
+                        }
+                    }}
                     onSelect={onSelect} />
         </div>
         <div style={{
@@ -47,18 +72,46 @@ export function GrammarViewer() {
             boxShadow: 'rgba(255, 255, 255, 0.063) 0px 1px 1px inset',
 
         }}>
-            <Button onClick={() => {}} value="+" tooltip="Add grammar element" />
-            <Button onClick={() => {}} value="-" tooltip="Remove grammar element" style={{marginLeft: '10px' }} />
+            <Button onClick={() => {
+                if (state.grammarTree.selectedNodes.length === 0) {
+                    return;
+                }
+                const parent = state.grammar?.getElement(state.grammarTree.selectedNodes[0]);
+                if (parent == null) {
+                    return;
+                }
+                dispatch(createGrammarNode({ parent }));
+                setTimeout(() => {
+                    dispatch(analyzeFile(undefined));
+                }, 0);
+            }} value="+" tooltip="Add grammar element" />
+            <Button onClick={() => {
+                if (state.grammarTree.selectedNodes.length === 0) {
+                    return;
+                }
+                const node = state.grammar?.getElement(state.grammarTree.selectedNodes[0]);
+                if (node == null) {
+                    return;
+                }
+                dispatch(deleteGrammarNode(node));
+                setTimeout(() => {
+                    dispatch(analyzeFile(undefined));
+                }, 0);
+            }} value="-" tooltip="Remove grammar element" style={{marginLeft: '10px' }} />
         </div>
     </div>
 }
 
-const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(hoverGrammarNode(node.data)));
-const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(unhoverGrammarNode(node.data)));
-const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => dispatch(selectGrammarNode(node.data)));
+function onRequestDrag() {
+    return true;
+}
+
+const onOverCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => dispatch(hoverGrammarNode(node.data)));
+const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => dispatch(unhoverGrammarNode(node.data)));
+const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => dispatch(selectGrammarNode(node.data)));
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarTree>) => {
+const renderHeaderCallback = callback((availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => {
     switch (node.data.type) {
         case 'value':
             return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch} />;

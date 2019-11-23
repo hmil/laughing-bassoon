@@ -1,3 +1,4 @@
+import { arrayRemove, arrayReplace, arrayInsert } from 'std/readonly-arrays';
 
 export interface TreeViewNode<T> {
     data: T;
@@ -20,17 +21,27 @@ export interface Spacer {
     height: number;
 }
 
+export interface DragPlaceholder {
+    type: 'drag-placeholder',
+    height: number
+}
+
+const DRAG_PLACEHOLDER: DragPlaceholder = {
+    type: "drag-placeholder",
+    height: 30
+};
+
 export class TreeViewState<T> {
 
     public static createEmpty<T>(): TreeViewState<T> {
-        return new TreeViewState([], [], [], []);
+        return new TreeViewState(null, [], [], [], []);
     }
 
     public static create<T>(data: TreeViewNode<T>[]): TreeViewState<T> {
-        return new TreeViewState([], [], [], this.processNodes(data));
+        return new TreeViewState(null, [], [], [], this.processNodes(data, []));
     }
 
-    private static processNodes<T>(data: TreeViewNode<T>[]): Array<Spacer | TreeViewModel<T>> {
+    private static processNodes<T>(data: TreeViewNode<T>[], collapsedNodes: string[]): Array<Spacer | TreeViewModel<T>> {
         function rec(data: TreeViewNode<T>[], level: number): Array<Spacer | TreeViewModel<T>> {
             let res = new Array<Spacer | TreeViewModel<T>>();
             data.forEach(value => {
@@ -47,7 +58,9 @@ export class TreeViewState<T> {
                     children,
                     type: 'model'
                 });
-                res.push(...children);
+                if (collapsedNodes.indexOf(value.id) < 0) {
+                    res.push(...children);
+                }
             });
             if (res.length === 0 || res[res.length - 1].type !== 'spacer') {
                 res.push({
@@ -61,15 +74,24 @@ export class TreeViewState<T> {
         return rec(data, 0);
     }
 
+    private _totalHeight: number | null = null;
+
     private constructor(
+            public readonly draggedNode: TreeViewModel<T> | null,
             public readonly hoveredNodes: string[],
             public readonly selectedNodes: string[],
             public readonly collapsedNodes: string[],
-            public readonly data: Array<Spacer | TreeViewModel<T>>) {}
+            public readonly data: Array<Spacer | TreeViewModel<T> | DragPlaceholder>) {}
 
-    // TODO: The state must be flattened in order to compute the actual height and render partial children etc...
+    public getNode(id: string): TreeViewModel<T>| undefined {
+        return this.data.find<TreeViewModel<T>>((d): d is TreeViewModel<any> => d.type === 'model' && d.id === id);
+    }
+
     public get totalHeight(): number {
-        return this.data.reduce((acc, d) => acc + d.height, 0);
+        if (this._totalHeight == null) {
+            this._totalHeight = this.data.reduce((acc, d) => acc + d.height, 0);
+        }
+        return this._totalHeight;
     }
 
     public getIndexAtY(y: number, inclusive: boolean): number {
@@ -104,6 +126,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             this.hoveredNodes.concat(nodesToAdd),
             this.selectedNodes,
             this.collapsedNodes,
@@ -117,6 +140,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             arrayRemove(this.hoveredNodes, idx),
             this.selectedNodes,
             this.collapsedNodes,
@@ -129,6 +153,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             [],
             this.selectedNodes,
             this.collapsedNodes,
@@ -146,6 +171,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             this.hoveredNodes,
             this.selectedNodes.concat(nodesToAdd),
             this.collapsedNodes,
@@ -159,6 +185,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             this.hoveredNodes,
             arrayRemove(this.selectedNodes, idx),
             this.collapsedNodes,
@@ -171,6 +198,7 @@ export class TreeViewState<T> {
             return this;
         }
         return new TreeViewState(
+            this.draggedNode,
             this.hoveredNodes,
             [],
             this.collapsedNodes,
@@ -215,14 +243,100 @@ export class TreeViewState<T> {
 
 
         return new TreeViewState(
+            this.draggedNode,
             this.hoveredNodes,
             this.selectedNodes,
             isExpanded ? [...this.collapsedNodes, node.id] : arrayRemove(this.collapsedNodes, idx),
             data
         );
     }
-}
 
-function arrayRemove<T>(input: ReadonlyArray<T>, index: number): T[] {
-    return [...input.slice(0, index), ...input.slice(index + 1)];
+    public setData(data: TreeViewNode<T>[]): TreeViewState<T> {
+        return new TreeViewState(
+            this.draggedNode,
+            this.hoveredNodes,
+            this.selectedNodes,
+            this.collapsedNodes,
+            TreeViewState.processNodes(data, this.collapsedNodes)
+        );
+    }
+
+    public isCollapsed(id: string): boolean {
+        return this.collapsedNodes.indexOf(id) >= 0;
+    }
+
+    // Drag and drop features
+
+    public startDragNode(node: string): TreeViewState<T> {
+        const idx = this.data.findIndex(v => v.type === 'model' && v.id === node);
+        if (idx < 0) {
+            console.error('Node does not exist');
+            return this;
+        }
+        return new TreeViewState(
+            this.data[idx] as TreeViewModel<T>,
+            this.hoveredNodes,
+            this.selectedNodes,
+            this.collapsedNodes,
+            arrayReplace(this.data, idx, DRAG_PLACEHOLDER)
+        );
+    }
+
+    public updateDropIndex(newIndex: number): TreeViewState<T> {
+        if (this.draggedNode == null) {
+            console.error('No node is currently dragged');
+            return this;
+        }
+        const idx = this.data.indexOf(DRAG_PLACEHOLDER);
+        return new TreeViewState(
+            this.draggedNode,
+            this.hoveredNodes,
+            this.selectedNodes,
+            this.collapsedNodes,
+            arrayInsert(arrayRemove(this.data, idx), newIndex, DRAG_PLACEHOLDER)
+        );
+    }
+
+    public stopDragging(): TreeViewState<T> {
+        if (this.draggedNode == null) {
+            console.error('No node is currently dragged');
+            return this;
+        }
+        const idx = this.data.indexOf(DRAG_PLACEHOLDER);
+        return new TreeViewState(
+            null,
+            this.hoveredNodes,
+            this.selectedNodes,
+            this.collapsedNodes,
+            arrayReplace(this.data, idx, this.draggedNode)
+        );
+    }
+
+    public isDragging(): boolean {
+        return this.draggedNode != null;
+    }
+
+    /**
+     * Returns a tuple with a suitable parent and the position in the children array of that parent or of the root.
+     */
+    public getDropInfo(): [TreeViewModel<T> | null, number] {
+        const idx = this.data.indexOf(DRAG_PLACEHOLDER);
+        let position = 0;
+        let lastLevel = Number.MAX_SAFE_INTEGER;
+        for (let i = idx - 1; i >= 0 ; i--) {
+            const node = this.data[i];
+            if (node.type === 'model') {
+                if (node.hasChildren && node.level < lastLevel) {
+                    return [node, position];
+                }
+                if (node.level < lastLevel) {
+                    lastLevel = node.level;
+                    position++;
+                } else if (node.level === lastLevel) {
+                    position++;
+                }
+            }
+        }
+        return [null, position];
+    }
 }

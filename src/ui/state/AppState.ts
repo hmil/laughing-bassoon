@@ -1,5 +1,5 @@
 import { AbtRoot } from 'abt/Abt';
-import { Grammar, GrammarTree } from 'ui/domain/grammar/Grammar';
+import { Grammar, GrammarElement } from 'ui/domain/grammar/Grammar';
 import { FileStructure, FileStructureNode } from 'ui/domain/structure/Structure';
 import { TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
 
@@ -12,7 +12,7 @@ export interface AppState {
     structure: FileStructure | null;
     fileName: string;
 
-    grammarTree: TreeViewState<GrammarTree>;
+    grammarTree: TreeViewState<GrammarElement>;
     structureTree: TreeViewState<FileStructureNode>;
 }
 

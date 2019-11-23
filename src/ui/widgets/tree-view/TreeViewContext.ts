@@ -9,6 +9,8 @@ export interface TreeViewContext<T> {
     onOver(node: TreeViewModel<T>): void;
     onOut(node: TreeViewModel<T>): void;
     onSelect(node: TreeViewModel<T>): void;
+    dragCandidate: TreeViewModel<T> | null;
+    dragEnabled: boolean;
 }
 export const TreeViewContext = React.createContext<TreeViewContext<unknown>>({
     state: TreeViewState.createEmpty(),
@@ -16,7 +18,9 @@ export const TreeViewContext = React.createContext<TreeViewContext<unknown>>({
     onChange: notImplemented,
     onOver: notImplemented,
     onOut: notImplemented,
-    onSelect: notImplemented
+    onSelect: notImplemented,
+    dragCandidate: null,
+    dragEnabled: false
 });
 
 function notImplemented(): never {

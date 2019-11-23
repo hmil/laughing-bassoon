@@ -9,11 +9,15 @@ ROADMAP:
 
 ## MVP
 
-- Editor controls for the grammar
-- HexView cursor & selection behavior
-- Create nodes with selection on hexview
-- Fix scroll behavior bug
-- Edition in hex view
+- [ ] Streamline grammar model
+  - [ ] Merge container and value types
+- [ ] Editor controls for the grammar
+  - [ ] Change node type
+  - [ ] Move node in list (drag and drop)
+- [ ] HexView cursor & selection behavior
+- [ ] Create nodes with selection on hexview
+- [x] Fix scroll behavior bug
+- [ ] Edition in hex view
 
 ## Nice to have
 
@@ -22,3 +26,4 @@ ROADMAP:
 ## Later
 
 - Text mode edition of grammars
+- Parsing in a worker
