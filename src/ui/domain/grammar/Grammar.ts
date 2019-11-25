@@ -1,110 +1,46 @@
-import { ParserDefinition, AnyElement } from 'parser/model';
 import { TreeViewState, TreeViewNode } from 'ui/widgets/tree-view/TreeViewState';
 import { uniqId } from 'parser/uid';
+import { ParserGrammar, GrammarInstruction } from 'parser/domain/Grammar';
 
-
-
-// function makeTrailer(): TreeViewNode<TrailerGrammarElement> {
-//     const id = uniqId();
-//     return {
-//         id: `${id}`,
-//         data: {
-//             id: `${id}`,
-//             children: [],
-//             ref: '',
-//             type: 'trailer'
-//         },
-//         children: []
-//     };
-// }
-
-// function makeGrammarTree(grammar: Grammar): TreeViewState<GrammarTree> {
-
-//     function rec(node: GrammarTree): TreeViewNode<GrammarTree> {
-//         let children = node.children.map(rec);
-//         if (children.length > 0) {
-//             children = children.concat([makeTrailer()]);
-//         }
-//         return {
-//             children,
-//             data: node,
-//             id: `${node.id}`
-//         }
-//     }
-
-//     return TreeViewState.create(grammar.definition.children.map(rec));
-// }
-
-
-//
-//
-// WIP: Re-create grammar storage structure
-// Make it flat instead of tree shaped so update/move operations are easier to implement
-//
-//
-
-// function importGrammar(grammar: ParserDefinition): Grammar {
-//     const id = uniqId();
-//     const path = [id];
-//     const indexById = new Map<number, GrammarTree>();
-//     const mapChild = importGrammarNode(path, indexById);
-//     const children = makeChildren(grammar.content, mapChild);
-//     const root: GrammarTree = {
-//         id: id,
-//         path: path,
-//         type: 'container',
-//         size: undefined,
-//         ref: undefined,
-//         children: children.children,
-//         childrenIndex: children.childrenIndex,
-//     };
-//     indexById.set(id, root);
-//     return {
-//         codecs: grammar.codecs != null ? grammar.codecs : [],
-//         mimeType: grammar.type,
-//         definition: root,
-//         indexById
-//     };
-// }
 
 export class Grammar {
 
-    public static importFromParser(def: ParserDefinition): Grammar {
+    public static importFromParser(def: ParserGrammar): Grammar {
         const elements: Map<string, GrammarElement> = new Map();
         const parents: Map<string, string> = new Map();
 
-        function importElements(source: AnyElement[]): string[] {
+        function importElements(source: ReadonlyArray<GrammarInstruction>): string[] {
             return source.map(content => {
-                const children = importElements('content' in content && content.content || []);
-                const id = `${uniqId()}`;
-                children.forEach(c => parents.set(c, id));
                 switch (content.type) {
                     case 'container': {
-                        elements.set(id, {
-                            id,
+                        const children = importElements(content.content);
+                        children.forEach(c => parents.set(c, content.id));
+                        elements.set(content.id, {
+                            id: content.id,
                             children: children,
                             type: 'container',
                             ref: content.ref,
-                            size: importSize(content) 
+                            size: content.size
                         });
                         break;
                     }
-                    case 'fixed':
-                        elements.set(id, {
-                            id,
+                    case 'fixed': {
+                        elements.set(content.id, {
+                            id: content.id,
                             type: 'value',
-                            children: children,
+                            children: [],
                             ref: content.ref,
-                            size: importSize(content) || { value: '0', unit: 'byte' },
+                            size: content.size,
                             codec: content.codec,
                             constraints: content.constraints
                         });
                         break;
+                    }
                     case 'repeat': {
                         const children = importElements(content.do);
-                        children.forEach(c => parents.set(c, id));
-                        elements.set(id, {
-                            id,
+                        children.forEach(c => parents.set(c, content.id));
+                        elements.set(content.id, {
+                            id: content.id,
                             type: 'repeat',
                             children: children,
                             ref: content.ref,
@@ -114,35 +50,38 @@ export class Grammar {
                     }
                     case 'if': {
                         const children = importElements(content.then || []);
-                        children.forEach(c => parents.set(c, id));
-                        elements.set(id, {
-                            id,
+                        children.forEach(c => parents.set(c, content.id));
+                        elements.set(content.id, {
+                            id: content.id,
                             type: 'if',
                             children: children,
                             ref: content.ref,
-                            condition: content.cond
+                            condition: content.condition
                         });
                         break;
                     }
                 }
-                return id;
+                return content.id;
             });
         }
 
-        const roots = importElements(def.content);
+        const roots = importElements(def.root);
 
-        return new Grammar(def.codecs || [], def.type, roots, elements, parents);
+        return new Grammar(def, def.type, roots, elements, parents);
     }
 
-    private _definition: ParserDefinition | null = null;
-    private _backMapping: Map<AnyElement, string> = new Map();
+    private _asParserGrammar: ParserGrammar | null = null;
 
     constructor(
-            private codecs: Codec[],
+            private original: ParserGrammar,
             private mimeType: string,
             private roots: string[],
             private elements: Map<string, GrammarElement>,
             private parentsMapping: Map<string, string>) {
+    }
+
+    public getRootElements(): GrammarElement[] {
+        return this.roots.map(id => this.getElement(id)).filter(removeNulls);
     }
 
     public asTreeViewState(previous?: TreeViewState<GrammarElement>): TreeViewState<GrammarElement> {
@@ -192,28 +131,19 @@ export class Grammar {
         }
     }
 
-    public get asParserDefinition(): ParserDefinition {
-        if (this._definition == null) {
-            this._definition = {
-                codecs: this.codecs.length > 0 ? this.codecs : undefined,
-                type: this.mimeType,
-                endian: 'little',
-                wordlength: 32,
-                content: this.roots.map(root => this.exportGrammarElement(root)).filter(removeNulls)
+    public get asParserGrammar(): ParserGrammar {
+        if (this._asParserGrammar == null) {
+            const root = this.roots.map(root => this.exportGrammarElement(root)).filter(removeNulls);
+            this._asParserGrammar = {
+                codecs: this.original.codecs,
+                root: root,
+                type: this.mimeType
             };
         }
-        return this._definition;
+        return this._asParserGrammar;
     }
 
-    private exportGrammarElement(id: string): AnyElement | null {
-        const ret = this._exportGrammarElement(id);
-        if (ret != null) {
-            this._backMapping.set(ret, id);
-        }
-        return ret;
-    }
-
-    private _exportGrammarElement(id: string): AnyElement | null {
+    private exportGrammarElement(id: string): GrammarInstruction | null {
         const elem = this.getElement(id);
         if (elem == null) {
             console.log('No such element');
@@ -223,28 +153,32 @@ export class Grammar {
         switch (elem.type) {
             case 'container':
                 return {
+                    id: elem.id,
                     type: 'container',
                     content: elem.children.length > 0 ? elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls) : [],
                     ref: elem.ref,
-                    size: elem.size == null ? undefined : elem.size.value
+                    size: elem.size
                 };
             case 'value':
                 return {
+                    id: elem.id,
                     type: 'fixed',
                     codec: elem.codec,
                     ref: elem.ref,
                     constraints: elem.constraints,
-                    ...exportSize(elem.size)
+                    size: elem.size
                 };
             case 'if':
                 return {
+                    id: elem.id,
                     type: 'if',
-                    cond: elem.condition,
+                    condition: elem.condition,
                     then: elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls),
                     ref: elem.ref
                 };
             case 'repeat':
                 return {
+                    id: elem.id,
                     type: 'repeat',
                     until: elem.until.map(c => this.exportGrammarElement(c)).filter(removeNulls),
                     do: elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls),
@@ -255,16 +189,6 @@ export class Grammar {
         }
     }
 
-    public get parserBackMapping(): (el: AnyElement) => string {
-        return (el) => {
-            const ret = this._backMapping.get(el);
-            if (ret == null) {
-                return 'null';
-            }
-            return ret;
-        };
-    }
-
     public update(id: string, node: GrammarElement): Grammar {
         if (id !== node.id) {
             throw new Error('Trying to replace a node with a different id');
@@ -273,7 +197,7 @@ export class Grammar {
         elements.set(id, node);
         const parents = this.parentsMapping;
         node.children.forEach(c => parents.set(c, id));
-        return new Grammar(this.codecs, this.mimeType, this.roots, elements, parents);
+        return new Grammar(this.original, this.mimeType, this.roots, elements, parents);
     }
 
     public createElement(_type: GrammarElement['type']): GrammarElement {
@@ -291,7 +215,7 @@ export class Grammar {
     public removeElement(id: string): Grammar {
         const elements = new Map(this.elements);
         elements.delete(id);
-        return new Grammar(this.codecs, this.mimeType, this.roots, elements, this.parentsMapping);
+        return new Grammar(this.original, this.mimeType, this.roots, elements, this.parentsMapping);
     }
 
     public getElement(id: string): GrammarElement | undefined {
@@ -305,24 +229,6 @@ export class Grammar {
         }
         return this.getElement(parentId);
     }
-}
-
-function importSize({ size, bitSize }: { size?: string | number, bitSize?: string | number }): Size | undefined {
-    if (size != null) {
-        return {
-            value: `${size}`,
-            unit: 'byte'
-        }
-    } else if (bitSize != null) {
-        return {
-            value: `${bitSize}`,
-            unit: 'bit'
-        }
-    }
-}
-
-function exportSize(size: Size): { size: string | number} | { bitSize: string | number } {
-    return size.unit === 'byte' ? { size: size.value } : { bitSize: size.value };
 }
 
 export interface Codec {

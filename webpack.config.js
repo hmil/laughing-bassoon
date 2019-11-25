@@ -2,7 +2,7 @@ const path = require('path')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
 
 module.exports = {
-    entry: './src/index.ts',
+    entry: './src/modules/main.ts',
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'app.bundle.js'
@@ -10,10 +10,17 @@ module.exports = {
     module: {
         rules: [
             {
+                test: /\.worker\.[tj]s$/,
+                use: {
+                    loader: 'worker-loader',
+                    options: { publicPath: '/dist/' }
+                },
+            },
+            {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
                 exclude: /node_modules/
-            }
+            },
         ]
     },
     resolve: {

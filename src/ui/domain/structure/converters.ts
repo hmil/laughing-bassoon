@@ -1,7 +1,6 @@
-import { AbtNode, AbtRoot } from 'abt/Abt';
+import { AbtNode, AbtRoot } from 'parser/domain/Abt';
 
 import { FileStructure, FileStructureNode } from './Structure';
-import { AnyElement } from 'parser/model';
 
 class ColorPalette {
 
@@ -25,10 +24,10 @@ class ColorPalette {
     }
 }
 
-export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => string): FileStructure {
+export function importStructure(abt: AbtRoot): FileStructure {
     const colorMachine = new ColorPalette();
     const indexById = new Map<number, FileStructureNode>();
-    const children = makeChildren(abt.children, backMapping, colorMachine, [abt.id], indexById);
+    const children = makeChildren(abt.children, colorMachine, [abt.id], indexById);
     const root: FileStructureNode = {
         path: [],
         children: children.children,
@@ -49,7 +48,7 @@ export function importStructure(abt: AbtRoot, backMapping: (el: AnyElement) => s
 }
 
 
-function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => string, colorMachine: ColorPalette, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
+function makeChildren(content: AbtNode[], colorMachine: ColorPalette, prefix: ReadonlyArray<number>, indexById: Map<number, FileStructureNode>):{
         children: ReadonlyArray<FileStructureNode>,
         childrenIndex: Map<number, FileStructureNode>,
         byGrammarNode: {[k: string]: FileStructureNode[] }
@@ -67,7 +66,7 @@ function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => strin
     return { children, byGrammarNode, childrenIndex };
 
     function importNode(content: AbtNode): FileStructureNode {
-        const children = makeChildren(content.children != null ? content.children : [], backMapping, colorMachine, [...prefix, content.id], indexById);
+        const children = makeChildren(content.children != null ? content.children : [], colorMachine, [...prefix, content.id], indexById);
         byGrammarNode = mergeIndices(
             byGrammarNode,
             children.byGrammarNode
@@ -81,7 +80,7 @@ function makeChildren(content: AbtNode[], backMapping: (el: AnyElement) => strin
                     children: children.children,
                     childrenIndex: children.childrenIndex,
                     name: content.name,
-                    origin: backMapping(content.origin),
+                    origin: content.origin,
                     start: content.start,
                     end: content.end
                 };

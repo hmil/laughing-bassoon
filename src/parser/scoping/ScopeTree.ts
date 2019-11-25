@@ -1,4 +1,4 @@
-import { AnyElement } from '../model';
+import { GrammarInstruction } from 'parser/domain/Grammar';
 
 export type VariableListener = (variable: number) => void;
 
@@ -73,9 +73,9 @@ export class Scope {
 
 export class ScopeTree {
 
-    private mapping: Map<AnyElement, Scope> = new Map();
+    private mapping: Map<GrammarInstruction, Scope> = new Map();
 
-    public getScopeForNode(node: AnyElement): Scope {
+    public getScopeForNode(node: GrammarInstruction): Scope {
         const scope = this.mapping.get(node);
         if (scope == null) {
             throw new Error(`Element has no scope!`);
@@ -87,7 +87,7 @@ export class ScopeTree {
         return new Scope(parent, name);
     }
 
-    public attachScope(node: AnyElement, scope: Scope): void {
+    public attachScope(node: GrammarInstruction, scope: Scope): void {
         if (this.mapping.has(node)) {
             throw new Error('Node is already attached to a scope!');
         }

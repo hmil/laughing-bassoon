@@ -1,4 +1,3 @@
-import { AbtRoot } from 'abt/Abt';
 import { Grammar, GrammarElement } from 'ui/domain/grammar/Grammar';
 import { FileStructure, FileStructureNode } from 'ui/domain/structure/Structure';
 import { TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
@@ -6,7 +5,6 @@ import { TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
 export interface AppState {
     fileData: Uint8Array | null;
     activeChunks: number[];
-    abt: AbtRoot | null;
     grammar: Grammar | null;
     availableCodecs: string[];
     structure: FileStructure | null;
@@ -14,6 +12,8 @@ export interface AppState {
 
     grammarTree: TreeViewState<GrammarElement>;
     structureTree: TreeViewState<FileStructureNode>;
+
+    isAnalysisInProgress: boolean;
 }
 
 export interface AbtUiStateTree {
@@ -27,9 +27,9 @@ export const appInitialState: AppState = {
     fileName: '',
     activeChunks: [0, 1, 2],
     grammar: null,
-    abt: null,
     availableCodecs: [],
     structure: null,
     grammarTree: TreeViewState.createEmpty(),
-    structureTree: TreeViewState.createEmpty()
+    structureTree: TreeViewState.createEmpty(),
+    isAnalysisInProgress: false
 };

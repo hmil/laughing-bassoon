@@ -1,6 +1,6 @@
 import { Codec } from "./Codec";
-import { CodecModel } from "../model/core/CodecModel";
 import { right, left, Either } from "fp-ts/lib/Either";
+import { CodecModel } from 'parser/dsl/core/CodecModel';
 
 type DecodingFn = (value: Uint8Array, str:(data: Uint8Array) => string) => number;
 

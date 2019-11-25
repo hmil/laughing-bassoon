@@ -31,7 +31,8 @@
     "typestrict": "^1.0.2",
     "webpack": "^4.35.3",
     "webpack-cli": "^3.3.6",
-    "webpack-dev-server": "^3.7.2"
+    "webpack-dev-server": "^3.7.2",
+    "worker-loader": "^2.0.0"
   },
   "dependencies": {
     "js-yaml": "^3.13.1",

@@ -1,10 +1,11 @@
-import { ParserDefinition } from '../parser/model';
 import * as yaml from 'js-yaml';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { fold } from 'fp-ts/lib/Either';
 import { reporter } from 'io-ts-reporters';
+import { ParserGrammar, dslToGrammar } from 'parser/domain/Grammar';
+import { ParserDefinition } from 'parser/dsl';
 
-export function loadSchema(src: string): Promise<ParserDefinition> {
+export function loadSchema(src: string): Promise<ParserGrammar> {
     return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
         xhr.open('get', src, true);
@@ -21,7 +22,7 @@ export function loadSchema(src: string): Promise<ParserDefinition> {
                         parsed,
                         fold(
                             _ => reject(reporter(parsed).join('\n')),
-                            schema => resolve(schema)
+                            dsl => resolve(dslToGrammar(dsl))
                         )
                     );
                 } else {

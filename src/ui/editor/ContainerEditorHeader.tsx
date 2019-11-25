@@ -6,17 +6,17 @@ import { callback } from 'ui/react/hooks';
 import { If } from 'ui/react/tsx-helpers';
 import { Button } from 'ui/widgets/Button';
 import { TextInput } from 'ui/widgets/TextInput';
+import { UiAnalyzerService } from 'ui/services/ui-analyzer-service';
+import { ServicesContext } from 'ui/ServicesContext';
 
 interface ContainerEditorHeaderProps {
     value: ContainerGrammarElement;
     dispatch: React.Dispatch<AppActions>;
 }
 
-const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ContainerGrammarElement) => {
+const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>, analyzer: UiAnalyzerService) => (elem: ContainerGrammarElement) => {
     dispatch(editGrammarNode(elem));
-    setTimeout(() => {
-        dispatch(analyzeFile(undefined));
-    }, 0);
+    dispatch(analyzeFile(analyzer));
 });
 
 const onNameChangeCallback = callback((value: ContainerGrammarElement, onChange: (elem: ContainerGrammarElement) => void) =>
@@ -64,7 +64,9 @@ export const ContainerEditorHeader = React.memo(function _ValueEditorHeader({val
     // const { state, dispatch } = React.useContext(AppContext);
     const [ editorState, setEditorState ] = React.useState({ editName: false });
 
-    const onChange = onChangeCallback(dispatch);
+    const { analyzer } = React.useContext(ServicesContext);
+
+    const onChange = onChangeCallback(dispatch, analyzer);
     const onNameChange = onNameChangeCallback(value, onChange);
     const onSizeChange = onSizeChangeCallback(value, onChange);    
     const onStartEditName = onStartEditNameCallback(setEditorState);

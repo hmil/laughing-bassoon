@@ -1,11 +1,10 @@
-import { Parser } from 'parser/Parser';
-import { importStructure } from 'ui/domain/structure/converters';
 import { FileStructure, FileStructureNode } from 'ui/domain/structure/Structure';
 import { TreeViewNode, TreeViewState } from 'ui/widgets/tree-view/TreeViewState';
 
 import { AppState } from './AppState';
 import { Grammar, GrammarElement } from 'ui/domain/grammar/Grammar';
 import { arrayInsert } from 'std/readonly-arrays';
+import { UiAnalyzerService } from 'ui/services/ui-analyzer-service';
 
 export interface BaseAction<Type extends string, DATA> {
     type: Type;
@@ -154,8 +153,7 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
         }
     }
 
-    // TODO: Something fishy going on here. Probably because of GC system in grammar data structure
-    grammar = grammar.update(parent.id, {...parent, children: arrayInsert(parent.children, position ?? (parent.children.length - 1), newElement.id)});
+    grammar = grammar.update(parent.id, {...parent, children: arrayInsert(parent.children, position != null ? position : (parent.children.length - 1), newElement.id)});
     let grammarTree = grammar.asTreeViewState(state.grammarTree).unselectAll().selectNode(newElement.id);
 
     const parentChain: GrammarElement[] = [];
@@ -195,13 +193,20 @@ export const deleteGrammarNode = action('deleteGrammarNode', (state: AppState, n
     };
 });
 
-export const analyzeFile = action('analyzeFile', (state: AppState, _: undefined) => {
+export const analyzeFile = action('analyzeFile', (state: AppState, analyzer: UiAnalyzerService) => {
+    analyzer.analyzeFile(state).catch(e => console.error(e));
+    return {
+        ...state,
+        isAnalysisInProgress: true
+    };
+});
+
+export const loadResult = action('loadResult', (state: AppState, result: {tree: FileStructure, codecs: string[]}) => {
     if (state.grammar == null || state.fileData == null) {
         return state;
     }
-    const parser = new Parser(state.grammar.asParserDefinition, state.fileData);
-    const tree = parser.parse();
-    state = loadStructure.reduce(state, importStructure(tree, state.grammar.parserBackMapping));
-    state = setAvailableCodecs.reduce(state, parser.codecLibrary.getAllCodecNames());
-    return state;
+    // TODO: Somehow, the grammar view is no longer linked to the structure view...
+    state = loadStructure.reduce(state, result.tree);
+    state = setAvailableCodecs.reduce(state, result.codecs);
+    return { ...state, isAnalysisInProgress: false };
 });

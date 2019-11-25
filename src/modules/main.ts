@@ -1,4 +1,4 @@
-import { App } from './App';
+import { App } from 'ui/App';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 

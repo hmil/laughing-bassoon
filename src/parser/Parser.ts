@@ -1,164 +1,44 @@
-import { ParserDefinition, ContainerField, FixedField, Repeat, IfField } from './model';
-import { AnyElement } from "./model/AnyElement";
-import { AbtRoot, AbtNode } from '../abt/Abt';
 import { uniqId } from "./uid";
 import { Offset } from "./Offset";
-import { createCodecLibrary } from './codec';
-import { CodecLibrary } from './codec/CodecLibrary';
 import { Expression } from './Expression';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { fold } from 'fp-ts/lib/Either';
 import { createScopeTree, Scope } from './scoping';
 import { ScopeTree } from './scoping/ScopeTree';
+import { AbtRoot, AbtNode } from './domain/Abt';
+import { ParserGrammar, GrammarInstruction, IfGrammarInstruction, RepeatGrammarInstruction, ContainerGrammarInstruction, FixedGrammarInstruction } from './domain/Grammar';
+import { ParserThread } from './Thread'; 
+import { CodecLibrary } from './codec/CodecLibrary';
+import { createCodecLibrary } from './codec';
 
-
-// TODO: move to own file
-class Thread {
-
-    private static tcounter = 0;
-
-    private programCounter: number = 0;
-    private isComplete: boolean = false;
-    private errors: string[] = [];
-    private isCancelled: boolean = false;
-
-    private errorListeners: Array<(err: string) => void> = [];
-    private finalizedListeners: Array<(err?: string[]) => void> = [];
-
-    public readonly id: number = Thread.tcounter ++;
-
-    constructor(
-            public readonly context: string,
-            private _offset: Offset,
-            private _limit: Offset,
-            public readonly instructions: AnyElement[],
-            public readonly produce: (node: AbtNode) => void) {
-        this.log(`Spawn`);
-    }
-
-    public get offset() { return this._offset }
-    public get limit() { return this._limit }
-
-    fork(nextContext: string | null, instructions: AnyElement[], produce?: (node: AbtNode) => void): Thread {
-        return new Thread(
-            nextContext == null ? this.context : `${this.context}/${nextContext}`,
-            this._offset,
-            this._limit,
-            instructions,
-            produce ? produce : this.produce
-        );
-    }
-
-    abort(): void {
-        this.assertNotComplete();
-        this.finalize();
-        this.isCancelled = true;
-    }
-
-    step(): AnyElement | undefined {
-        if (this.isCancelled) {
-            return undefined;
-        }
-        this.assertNotComplete();
-        if (this.programCounter >= this.instructions.length) {
-            this.finalize();
-            return undefined;
-        }
-        if (this.limit.compareTo(this.offset) <= 0) {
-            this.addError('EOF reached');
-            this.finalize();
-            return undefined;
-        }
-        const elem = this.instructions[this.programCounter];
-        this.programCounter++;
-        return elem;
-    }
-
-    stepBack(): void {
-        this.assertNotComplete();
-        if (this.programCounter < 1) {
-            throw new Error(`Attempted to rewind a thread beyond its origin`);
-        }
-        this.programCounter--;
-    }
-
-    moveTo(offset: Offset) {
-        this._offset = offset;
-    }
-
-    moveBy(offset: Offset) {
-        this._offset = this._offset.add(offset)
-    }
-
-    onFinalized(listener: (err?: string[]) => void): void {
-        this.finalizedListeners.push(listener);
-    }
-
-    onError(listener: (err: string) => void): void {
-        this.errorListeners.push(listener);
-    }
-
-    log(_msg: string) {
-        // console.log(`[${this.id}] ${msg}`);
-    }
-
-    private notifyError(err: string) {
-        this.errorListeners.forEach(l => l(err));
-    }
-
-    private notifyFinalized() {
-        const err = this.errors.length > 0 ? this.errors : undefined;
-        this.finalizedListeners.forEach(l => l(err));
-    }
-
-    public addError(err: string) {
-        // TODO: Make `abort` work recursively instead of this.
-        if (this.isComplete) {
-            return;
-        }
-        this.errors.push(err);
-        this.notifyError(`[${this.id}] ${err}`);
-    }
-
-    private finalize() {
-        this.isComplete = true;
-        this.notifyFinalized();
-    }
-
-    private assertNotComplete() {
-        if (this.isComplete) {
-            throw new Error(`Attempting to run a complete thread (${this.id})`);
-        }
-    }
-}
 
 export class Parser {
 
     public readonly codecLibrary: CodecLibrary;
     private readonly scopeTree: ScopeTree;
-    private openList: Thread[] = [];
+    private openList: ParserThread[] = [];
     private closedList: Set<(variable: number | null) => void> = new Set();
 
     constructor(
-            private readonly definition: ParserDefinition,
+            private readonly grammar: ParserGrammar,
             private readonly data: Uint8Array) {
-        this.codecLibrary = createCodecLibrary(definition.codecs);
-        this.scopeTree = createScopeTree(definition);
+        this.codecLibrary = createCodecLibrary(grammar.codecs);
+        this.scopeTree = createScopeTree(grammar);
     }
 
-    private resume(thread: Thread): void {
+    private resume(thread: ParserThread): void {
         thread.log(`Resume`);
         this.openList.push(thread);
     }
 
-    private processFixed(elem: FixedField, thread: Thread): void {
+    private processFixed(elem: FixedGrammarInstruction, thread: ParserThread): void {
         if ('bitSize' in elem) { // TODO: handle bit size
             throw new Error('Bit sizing not yet supported');
         }
 
         let name = elem.ref || '<field>';
 
-        this.resolveExpression(thread.context, this.scopeTree.getScopeForNode(elem), elem.size, size => {
+        this.resolveExpression(thread.context, this.scopeTree.getScopeForNode(elem), elem.size.value, size => {
             if (size == null) {
                 thread.addError('Cannot resolve size');
                 thread.produce({
@@ -167,7 +47,7 @@ export class Parser {
                     start: thread.offset.offset,
                     end: thread.offset.offset,
                     name: '[ERR] cannot resolve size',
-                    origin: elem
+                    origin: elem.id
                 });
                 return;
             }
@@ -213,7 +93,7 @@ export class Parser {
                 start: thread.offset.offset,
                 end: thread.offset.offset + size,
                 name: name,
-                origin: elem
+                origin: elem.id
             });
     
             thread.moveBy(new Offset(size, 0));
@@ -221,7 +101,7 @@ export class Parser {
         });
     }
 
-    private processContainer(elem: ContainerField, thread: Thread): void {
+    private processContainer(elem: ContainerGrammarInstruction, thread: ParserThread): void {
         thread.log(`Container: ${elem.ref}`);
 
         const id = uniqId();
@@ -244,7 +124,7 @@ export class Parser {
         }
 
         if (elem.size != null) {
-            this.resolveExpression(thread.context, scope, elem.size, size => {
+            this.resolveExpression(thread.context, scope, elem.size.value, size => {
                 if (size == null) {
                     thread.addError('cannot resolve size');
                     thread.produce({
@@ -254,7 +134,7 @@ export class Parser {
                         end: thread.offset.offset,
                         name: '[ERR] cannot resolve size',
                         children,
-                        origin: elem
+                        origin: elem.id
                     });
                     return;
                 }
@@ -266,7 +146,7 @@ export class Parser {
                     end: thread.offset.offset + size,
                     name: elem.ref || '<container>',
                     children,
-                    origin: elem
+                    origin: elem.id
                 });
 
                 thread.moveBy(new Offset(size, 0));
@@ -283,7 +163,7 @@ export class Parser {
                         end: thread.offset.offset,
                         name: '[ERR] cannot resolve size',
                         children,
-                        origin: elem
+                        origin: elem.id
                     });
                     return;
                 }
@@ -295,7 +175,7 @@ export class Parser {
                     end: end,
                     name: elem.ref || '<container>',
                     children,
-                    origin: elem
+                    origin: elem.id
                 });
 
                 thread.moveTo(new Offset(end, 0));
@@ -304,7 +184,7 @@ export class Parser {
         }
     }
 
-    private processRepeat(elem: Repeat, thread: Thread): void {
+    private processRepeat(elem: RepeatGrammarInstruction, thread: ParserThread): void {
         thread.log(`Repeat`);
         // This must be unique for each iteration, but ideally it should be sequential
         const iterationCounter = uniqId();
@@ -335,9 +215,9 @@ export class Parser {
         this.resume(testThread);
     }
 
-    private processIf(elem: IfField, thread: Thread): void {
+    private processIf(elem: IfGrammarInstruction, thread: ParserThread): void {
         const scope = this.scopeTree.getScopeForNode(elem);
-        this.resolveExpression(thread.context, scope, elem.cond, result => {
+        this.resolveExpression(thread.context, scope, elem.condition, result => {
             if (result) {
                 if (elem.then) {
                     const thenThread = thread.fork(null, elem.then);
@@ -350,22 +230,12 @@ export class Parser {
                     this.resume(thread);
                 }
             } else {
-                if (elem.else) {
-                    const elseThread = thread.fork(null, elem.else);
-                    elseThread.onFinalized(() => {
-                        thread.stepBack();
-                        thread.moveTo(elseThread.offset);
-                        this.resume(thread);
-                    });
-                    this.resume(elseThread);
-                } else {
-                    this.resume(thread);
-                }
+                this.resume(thread);
             }
         });
     }
 
-    private processNode(elem: AnyElement, head: Thread): void {
+    private processNode(elem: GrammarInstruction, head: ParserThread): void {
         switch (elem.type) {
             case 'fixed':
                 return this.processFixed(elem, head);
@@ -380,7 +250,7 @@ export class Parser {
         }
     }
 
-    private step(thread: Thread): void {
+    private step(thread: ParserThread): void {
         const instr = thread.step();
         if (instr != null) {
             this.processNode(instr, thread);
@@ -407,11 +277,11 @@ export class Parser {
             children: [ ]
         };
 
-        const thread = new Thread(
+        const thread = new ParserThread(
             'root',
             new Offset(0, 0),
             new Offset(this.data.length, 0),
-            this.definition.content,
+            this.grammar.root,
             node => root.children.push(node)
         );
         thread.onError(err => console.error(err));

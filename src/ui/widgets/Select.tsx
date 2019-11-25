@@ -43,6 +43,7 @@ export const Select = React.memo(function _Select(props: SelectProps) {
         position: 'relative',
         border: '1px #1a1a1a solid',
         padding: '2px 0px',
+        cursor: 'default',
         backgroundColor: '#212121',
         width: '100%',
         color: COLOR_TEXT_MAIN

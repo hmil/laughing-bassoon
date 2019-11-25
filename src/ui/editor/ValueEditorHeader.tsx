@@ -8,6 +8,8 @@ import { TextInput } from 'ui/widgets/TextInput';
 
 import { Select } from '../widgets/Select';
 import { ValueGrammarElement } from 'ui/domain/grammar/Grammar';
+import { UiAnalyzerService } from 'ui/services/ui-analyzer-service';
+import { ServicesContext } from 'ui/ServicesContext';
 
 function codecAsString(codec: string | undefined): string {
     if (codec == null) {
@@ -31,11 +33,9 @@ interface ValueEditorHeaderProps {
     availableCodecs: string[];
 }
 
-const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>) => (elem: ValueGrammarElement) => {
+const onChangeCallback = callback((dispatch: React.Dispatch<AppActions>, analyzer: UiAnalyzerService) => (elem: ValueGrammarElement) => {
     dispatch(editGrammarNode(elem));
-    setTimeout(() => {
-        dispatch(analyzeFile(undefined));
-    }, 0);
+    dispatch(analyzeFile(analyzer));
 });
 
 const onNameChangeCallback = callback((value: ValueGrammarElement, onChange: (elem: ValueGrammarElement) => void) =>
@@ -77,7 +77,8 @@ export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, 
 
     const [ editorState, setEditorState ] = React.useState({ editName: false });
 
-    const onChange = onChangeCallback(dispatch);
+    const { analyzer } = React.useContext(ServicesContext);
+    const onChange = onChangeCallback(dispatch, analyzer);
     const onNameChange = onNameChangeCallback(value, onChange);
     const onSizeChange = onSizeChangeCallback(value, onChange);    
     const onStartEditName = onStartEditNameCallback(setEditorState);
@@ -108,13 +109,14 @@ export const ValueEditorHeader = React.memo(function _ValueEditorHeader({value, 
             height: '100%'
         }}>
             <If cond={editorState.editName === false}>
-                <div 
-                    onDoubleClick={onStartEditName}
-                    style={{
-                        cursor: 'text',
+                <div style={{
                         flexGrow: 1
                     }}>
-                    {value.ref || '<value>'} 
+                    <span onDoubleClick={onStartEditName} style={{
+                        cursor: 'text'
+                    }}>
+                        {value.ref || '<value>'} 
+                    </span>
                 </div>
             </If>
             <If cond={editorState.editName === true}>

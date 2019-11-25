@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { GrammarElement } from './domain/grammar/Grammar';
+import { GrammarElement } from 'ui/domain/grammar/Grammar';
 import { ContainerEditorHeader } from './editor/ContainerEditorHeader';
 import { ValueEditorHeader } from './editor/ValueEditorHeader';
 import { callback } from './react/hooks';
@@ -21,6 +21,7 @@ import { Button } from './widgets/Button';
 import { TreeView } from './widgets/tree-view/TreeView';
 import { TreeViewLabel } from './widgets/tree-view/TreeViewLabel';
 import { TreeViewModel } from './widgets/tree-view/TreeViewState';
+import { ServicesContext } from './ServicesContext';
 
 export function GrammarViewer() {
 
@@ -30,6 +31,8 @@ export function GrammarViewer() {
     const onOut = onOutCallback(dispatch);
     const onSelect = onSelectCallback(dispatch);
     const renderHeader = renderHeaderCallback(state.availableCodecs, dispatch);
+
+    const { analyzer } = React.useContext(ServicesContext);
     
     return <div style={{
         display: 'flex',
@@ -51,16 +54,13 @@ export function GrammarViewer() {
                     onDrop={(node, position, parent) => {
                         if (state.grammar != null) {
                             if (parent != null) {
-                                console.log(position);
                                 dispatch(deleteGrammarNode(node.data));
                                 dispatch(createGrammarNode({
                                     parent: parent.data,
                                     position,
                                     defaultProps: node.data
                                 }));
-                                setTimeout(() => {
-                                    dispatch(analyzeFile(undefined));
-                                }, 0);
+                                dispatch(analyzeFile(analyzer));
                             }
                         }
                     }}
@@ -81,9 +81,7 @@ export function GrammarViewer() {
                     return;
                 }
                 dispatch(createGrammarNode({ parent }));
-                setTimeout(() => {
-                    dispatch(analyzeFile(undefined));
-                }, 0);
+                dispatch(analyzeFile(analyzer));
             }} value="+" tooltip="Add grammar element" />
             <Button onClick={() => {
                 if (state.grammarTree.selectedNodes.length === 0) {
@@ -94,9 +92,7 @@ export function GrammarViewer() {
                     return;
                 }
                 dispatch(deleteGrammarNode(node));
-                setTimeout(() => {
-                    dispatch(analyzeFile(undefined));
-                }, 0);
+                dispatch(analyzeFile(analyzer));
             }} value="-" tooltip="Remove grammar element" style={{marginLeft: '10px' }} />
         </div>
     </div>

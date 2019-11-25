@@ -1,11 +1,11 @@
 
 import { CodecLibrary } from './CodecLibrary';
 import { IntCodec } from './IntCodec';
-import { ParserDefinition } from '../model/ParserDefinition';
 import { CustomCodec } from './CustomCodec';
 import { CStringCodec } from './CStringCodec';
+import { ParserCodec } from 'parser/domain/Grammar';
 
-export function createCodecLibrary(definition: ParserDefinition['codecs'] | undefined) {
+export function createCodecLibrary(definition: ParserCodec[] | undefined) {
     const library = new CodecLibrary();
 
     // Register built-in codecs.
