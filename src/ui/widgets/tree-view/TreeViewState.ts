@@ -26,7 +26,7 @@ export interface DragPlaceholder {
     height: number
 }
 
-const DRAG_PLACEHOLDER: DragPlaceholder = {
+export const DRAG_PLACEHOLDER: DragPlaceholder = {
     type: "drag-placeholder",
     height: 30
 };
@@ -105,12 +105,12 @@ export class TreeViewState<T> {
             }
             current += this.data[i].height;
         }
-        return this.data.length;
+        return this.data.length - (inclusive === true ? 0 : 1);
     }
 
     public getYForNode(nodeIndex: number): number {
         let y = 0;
-        for (let i = 0 ; i < nodeIndex ; i++) {
+        for (let i = 0 ; i < nodeIndex && i < this.data.length ; i++) {
             y += this.data[i].height;
         }
         return y;
@@ -224,6 +224,7 @@ export class TreeViewState<T> {
         }
 
         if (isExpanded) {
+            indexEnd = this.data.length;
             for (let i = indexStart ; i < this.data.length ; i++) {
                 const model = this.data[i];
                 if (model.type === 'model' && model.level <= node.level) {
@@ -237,7 +238,24 @@ export class TreeViewState<T> {
             }
         } else {
             if (indexStart >= 0) {
-                data = [...this.data.slice(0, indexStart), ...node.children, ...this.data.slice(indexStart)];
+                let lastCollapsedLevel = -1;
+                const children = node.children.reduce(
+                    (acc, curr) => {
+                        if (lastCollapsedLevel < 0) {
+                            if (curr.type === 'model' && this.collapsedNodes.indexOf(curr.id) >= 0) {
+                                lastCollapsedLevel = curr.level;
+                            }
+                            return acc.concat(curr);
+                        } else if (curr.type === 'model') {
+                            if (curr.level <= lastCollapsedLevel) {
+                                lastCollapsedLevel = -1;
+                                return acc.concat(curr);
+                            }
+                        }
+                        return acc;
+                    },
+                    [] as Array<TreeViewModel<T> | Spacer>);
+                data = [...this.data.slice(0, indexStart), ...children, ...this.data.slice(indexStart)];
             }
         }
 
@@ -308,7 +326,7 @@ export class TreeViewState<T> {
             this.hoveredNodes,
             this.selectedNodes,
             this.collapsedNodes,
-            arrayReplace(this.data, idx, this.draggedNode)
+            arrayRemove(this.data, idx)
         );
     }
 
@@ -323,18 +341,23 @@ export class TreeViewState<T> {
         const idx = this.data.indexOf(DRAG_PLACEHOLDER);
         let position = 0;
         let lastLevel = Number.MAX_SAFE_INTEGER;
+        let hasSpacer = false;
         for (let i = idx - 1; i >= 0 ; i--) {
             const node = this.data[i];
             if (node.type === 'model') {
-                if (node.hasChildren && node.level < lastLevel) {
+                if (hasSpacer) {
+                    hasSpacer = false;
+                    lastLevel = node.level - 1;
+                } else if (node.hasChildren && node.level < lastLevel && !this.isCollapsed(node.id)) {
                     return [node, position];
-                }
-                if (node.level < lastLevel) {
+                } else if (node.level < lastLevel) {
                     lastLevel = node.level;
                     position++;
                 } else if (node.level === lastLevel) {
                     position++;
                 }
+            } else if (node.type === 'spacer') {
+                hasSpacer = true;
             }
         }
         return [null, position];

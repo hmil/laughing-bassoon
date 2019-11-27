@@ -114,11 +114,16 @@ export const hoverGrammarNode = action('hoverGrammarNode', (state: AppState, nod
 });
 
 export const selectGrammarNode = action('selectGrammarNode', (state: AppState, node: GrammarElement) => {
+    if (node.type === 'trailer') {
+        return state;
+    }
     if (state.structure != null) {
         const structureNodes = state.structure.indexByGrammarNode[node.id];
+        let structureTree = state.structureTree.unselectAll();
         if (structureNodes != null) {
-            state = {...state, structureTree: state.structureTree.unselectAll().selectNodes(structureNodes.map(node => `${node.id}`))};
+            structureTree = structureTree.selectNodes(structureNodes.map(node => `${node.id}`));
         }
+        state = {...state, structureTree };
     }
     return {
         ...state,
@@ -138,24 +143,36 @@ export const editGrammarNode = action('editGrammarNode', (state: AppState, node:
     };
 });
 
-export const createGrammarNode = action('createGrammarNode', (state: AppState, {parent, defaultProps, position}: 
-        {parent: GrammarElement, defaultProps?: GrammarElement, position?: number}) => {
+export const createGrammarNode = action('createGrammarNode', (state: AppState, {parent, defaultProps, position, collapsed}: 
+        {parent: GrammarElement | undefined, defaultProps?: GrammarElement, position?: number, collapsed?: boolean}) => {
     if (state.grammar == null) {
         return state;
     }
+
+    // Create an populate new node
     let grammar = state.grammar;
     const newElement = grammar.createElement('value');
     if (defaultProps != null) {
         grammar = grammar.update(newElement.id, Object.assign({}, defaultProps, { id: newElement.id }));
+    }
+
+    // Add the new node to its parent
+    if (parent != null) {
         const p2 = grammar.getElement(parent.id);
         if (p2 != null) {
             parent = p2;
         }
+
+        // TODO: Handle this in the grammar to deal with the trailer automatically (ie. add a trailer when the first child is added. Or maybe don't allow child nodes in regular elements...)
+        grammar = grammar.update(parent.id, {...parent, children: arrayInsert(parent.children, position != null ? position : (parent.children.length - 1), newElement.id)});
+    } else {
+        grammar = grammar.addRoot(newElement, position);
     }
 
-    grammar = grammar.update(parent.id, {...parent, children: arrayInsert(parent.children, position != null ? position : (parent.children.length - 1), newElement.id)});
+    // Select the new node
     let grammarTree = grammar.asTreeViewState(state.grammarTree).unselectAll().selectNode(newElement.id);
 
+    // Un-collapse all parent nodes such that the new node is visible
     const parentChain: GrammarElement[] = [];
     let current: GrammarElement | undefined = parent;
     while (current) {
@@ -169,6 +186,12 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
             grammarTree = grammarTree.toggleNode(currentNode);
         }
     }
+
+    // Set new node to collapsed if it should be collapsed
+    const newNode = grammarTree.getNode(newElement.id);
+    if (collapsed && newNode != null) {
+        grammarTree = grammarTree.toggleNode(newNode);
+    }
     return {
         ...state,
         grammar,
@@ -181,7 +204,7 @@ export const deleteGrammarNode = action('deleteGrammarNode', (state: AppState, n
         return state;
     }
     const parent = state.grammar.getParent(node);
-    const grammar = state.grammar.removeElement(node.id);
+    let grammar = state.grammar.removeElement(node.id);
     let grammarTree = grammar.asTreeViewState(state.grammarTree).unselectAll();
     if (parent != null) {
         grammarTree = grammarTree.selectNode(parent.id);

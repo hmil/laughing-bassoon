@@ -18,7 +18,7 @@ interface HexViewProps {
     nChunks: number;
 }
 
-const SCROLL_OFFSET = 1920; // TODO compute at runtime
+const CHUNK_HEIGHT_PX = 1920; // TODO compute at runtime
 
 export function HexView(props: HexViewProps) {
 
@@ -29,7 +29,7 @@ export function HexView(props: HexViewProps) {
     function onScroll() {
         const screen = screenRef.current;
         if (screen != null) {
-            const firstChunk = Math.max(0, Math.floor((screen.scrollTop - 2000) / SCROLL_OFFSET));
+            const firstChunk = Math.max(0, Math.floor((screen.scrollTop - 2000) / CHUNK_HEIGHT_PX));
             props.onRequestChunks(new Array(4).fill(0).map((_, i) => firstChunk + i));
         }
     }
@@ -47,9 +47,9 @@ export function HexView(props: HexViewProps) {
         }
     }, [props.abt, state, dispatch, screenRef.current, props.hoveredNodes, props.selectedNodes]);
 
-    const totalHeight = props.nChunks * SCROLL_OFFSET;
+    const totalHeight = props.nChunks * CHUNK_HEIGHT_PX;
 
-    const elevatorTop = props.chunks.length > 0 ? props.chunks[0].chunkNr * SCROLL_OFFSET : 0;
+    const elevatorTop = props.chunks.length > 0 ? props.chunks[0].chunkNr * CHUNK_HEIGHT_PX : 0;
 
     return (
         <HexViewContext.Provider value={ctx}>

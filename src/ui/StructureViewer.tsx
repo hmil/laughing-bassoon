@@ -6,25 +6,26 @@ import { hoverStructureNode, selectStructureNode, updateStructureTree, unhoverSt
 import { AppContext } from 'ui/state/AppContext';
 import { memo } from './react/hooks';
 import { TreeView } from './widgets/tree-view/TreeView';
-import { TreeViewModel } from './widgets/tree-view/TreeViewState';
+import { TreeViewModel, TreeViewState } from './widgets/tree-view/TreeViewState';
 import { TreeViewLabel } from './widgets/tree-view/TreeViewLabel';
 
 const handlers = memo((dispatch: React.Dispatch<AppActions>) => ({
     onOver: (node: TreeViewModel<FileStructureNode>) => dispatch(hoverStructureNode(node.data)),
     onOut: (node: TreeViewModel<FileStructureNode>) => dispatch(unhoverStructureNode(node.data)),
     onSelect: (node: TreeViewModel<FileStructureNode>) => dispatch(selectStructureNode(node.data)),
+    onChange: (state: TreeViewState<FileStructureNode>) => dispatch(updateStructureTree(state))
 }));
 
 export function StructureViewer() {
     const { state, dispatch } = React.useContext(AppContext);
-    const { onOver, onOut, onSelect } = handlers(dispatch);
+    const { onOver, onOut, onSelect, onChange } = handlers(dispatch);
 
     return <TreeView
         renderHeader={renderHeader}
         onOver={onOver}
         onOut={onOut}
         onSelect={onSelect}
-        onChange={s => dispatch(updateStructureTree(s))}
+        onChange={onChange}
         state={state.structureTree}
     ></TreeView>
 }

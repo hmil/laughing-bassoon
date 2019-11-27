@@ -1,6 +1,7 @@
 import { TreeViewState, TreeViewNode } from 'ui/widgets/tree-view/TreeViewState';
 import { uniqId } from 'parser/uid';
 import { ParserGrammar, GrammarInstruction } from 'parser/domain/Grammar';
+import { arrayInsert } from 'std/readonly-arrays';
 
 
 export class Grammar {
@@ -9,12 +10,24 @@ export class Grammar {
         const elements: Map<string, GrammarElement> = new Map();
         const parents: Map<string, string> = new Map();
 
+        function createTrailer(): string {
+            const trailer: TrailerGrammarElement = {
+                type: 'trailer',
+                id: `${uniqId()}`,
+                children: [],
+                ref: undefined
+            };
+            elements.set(trailer.id, trailer);
+            return trailer.id;
+        }
+
         function importElements(source: ReadonlyArray<GrammarInstruction>): string[] {
             return source.map(content => {
                 switch (content.type) {
                     case 'container': {
-                        const children = importElements(content.content);
+                        const children = [...importElements(content.content), createTrailer()];
                         children.forEach(c => parents.set(c, content.id));
+                        
                         elements.set(content.id, {
                             id: content.id,
                             children: children,
@@ -37,7 +50,7 @@ export class Grammar {
                         break;
                     }
                     case 'repeat': {
-                        const children = importElements(content.do);
+                        const children = [...importElements(content.do), createTrailer()];
                         children.forEach(c => parents.set(c, content.id));
                         elements.set(content.id, {
                             id: content.id,
@@ -49,7 +62,7 @@ export class Grammar {
                         break;
                     }
                     case 'if': {
-                        const children = importElements(content.then || []);
+                        const children = [...importElements(content.then || []), createTrailer()];
                         children.forEach(c => parents.set(c, content.id));
                         elements.set(content.id, {
                             id: content.id,
@@ -198,6 +211,17 @@ export class Grammar {
         const parents = this.parentsMapping;
         node.children.forEach(c => parents.set(c, id));
         return new Grammar(this.original, this.mimeType, this.roots, elements, parents);
+    }
+
+    public addRoot(node: GrammarElement, position?: number): Grammar {
+        const elements = new Map(this.elements);
+        const parents = new Map(this.parentsMapping);
+        if (!elements.has(node.id)) {
+            elements.set(node.id, node);
+        }
+        node.children.forEach(c => parents.set(c, node.id));
+
+        return new Grammar(this.original, this.mimeType, arrayInsert(this.roots, position != null ? position : this.roots.length, node.id), elements, parents);
     }
 
     public createElement(_type: GrammarElement['type']): GrammarElement {

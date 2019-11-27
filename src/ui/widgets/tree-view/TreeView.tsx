@@ -3,7 +3,7 @@ import { callback } from 'ui/react/hooks';
 
 import { TreeViewContext } from './TreeViewContext';
 import { TreeViewElement } from './TreeViewElement';
-import { TreeViewState, TreeViewModel } from './TreeViewState';
+import { TreeViewState, TreeViewModel, DRAG_PLACEHOLDER } from './TreeViewState';
 import { H_LINE_BOTTOM } from 'ui/styles/relief';
 import { If } from 'ui/react/tsx-helpers';
 
@@ -16,6 +16,7 @@ export interface TreeViewProps<T> {
     onOut?(node: TreeViewModel<T>): void;
     onSelect?(node: TreeViewModel<T>): void;
     onRequestDrag?(node: TreeViewModel<T>): boolean;
+    onRequestDrop?(node: TreeViewModel<T>): boolean;
     // Called when node is dropped into parent at position in the children array
     onDrop?(node: TreeViewModel<T>, position: number, parent: TreeViewModel<T> | null): void;
 }
@@ -39,14 +40,30 @@ export function TreeView<T>(props: TreeViewProps<T>) {
     const onOut = props.onOut || ((node: TreeViewModel<T>) => props.onChange(props.state.unhoverNode(node.id)));
     const onSelect = props.onSelect || ((node: TreeViewModel<T>) => props.onChange(props.state.unselectAll().selectNode(node.id)));
     const scrollRef = React.useRef<HTMLDivElement>(null);
-    const [ range, setRange ] = React.useState<ScrollRange>({ start: 0, end: 0});
+    const [ range, setRange ] = React.useState<ScrollRange>({ start: 0, end: 1});
     const onScroll = onScrollHandler(scrollRef, props.state, setRange);
 
     const [ dragCandidate, setDragCandidate ] = React.useState<TreeViewModel<T> | null>(null);
     const [ dragAnchor, setDragAnchor ] = React.useState(0);
     const [ dragOffset, setDragOffset ] = React.useState(0);
+    const [ initialDragState, setInitialDragState ] = React.useState(props.state);
 
     const dragEnabled = props.onDrop != null && props.onRequestDrag != null;
+
+    React.useEffect(() => {
+        function listener(evt: KeyboardEvent) {
+            if (evt.key === 'Escape' && props.state.isDragging()) {
+                props.onChange(initialDragState);
+                setDragCandidate(null);
+                evt.preventDefault();
+            }
+        }
+        window.addEventListener('keydown', listener);
+
+        return () => {
+            window.removeEventListener('keydown', listener);
+        }
+    }, [props.state.isDragging(), initialDragState, props.onChange]);
 
     // Initialize the virtual window
     React.useEffect(() => {
@@ -58,6 +75,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
     function dragUpHandler() {
         if (props.state.draggedNode != null) {
             if (props.onDrop != null) {
+                setDragCandidate(null);
                 props.onChange(props.state.stopDragging());
                 const [parent, position] = props.state.getDropInfo();
                 props.onDrop(props.state.draggedNode, position, parent);
@@ -68,7 +86,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
         }
     }
 
-    function dragMouveHandler(evt: React.MouseEvent<HTMLDivElement>) {
+    function dragMoveHandler(evt: React.MouseEvent<HTMLDivElement>) {
         const currentY = evt.clientY;
         if ((evt.buttons & 0x01) === 0) {
             setDragAnchor(0);
@@ -82,7 +100,23 @@ export function TreeView<T>(props: TreeViewProps<T>) {
             setDragAnchor(currentY);
             const relativeY = evt.clientY - evt.currentTarget.getBoundingClientRect().y;
             const index = props.state.getIndexAtY(relativeY, false);
-            props.onChange(props.state.updateDropIndex(index));
+            const placeholderPos = props.state.data.indexOf(DRAG_PLACEHOLDER);
+            const actualIndex = placeholderPos >= index ? index - 1 : index;
+            const dropTarget = props.state.data[Math.max(0, actualIndex)];
+            if (dropTarget.type === 'spacer' || dropTarget.type === 'model' && ( props.onRequestDrop == null || props.onRequestDrop(dropTarget) )) {
+                props.onChange(props.state.updateDropIndex(index));
+            }
+
+            // Adjust scrolling
+            if (scrollRef.current != null) {
+                if (actualIndex < props.state.getIndexAtY(scrollRef.current.scrollTop || 0, false)) {
+                    scrollRef.current.scrollBy(0, -10);
+                } else if (actualIndex >= props.state.getIndexAtY(scrollRef.current.scrollTop + scrollRef.current.clientHeight, false) - 1) {
+                    scrollRef.current.scrollBy(0, 10);
+                }
+            }
+
+            // TODO: Prevent element from dropping into itself (infinite recursion)
         } else {
             setDragAnchor(currentY);
         }
@@ -93,6 +127,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
             if (props.onDrop == null || props.onRequestDrag == null || props.onRequestDrag(model) === false) {
                 return;
             }
+            setInitialDragState(props.state);
             setDragAnchor(evt.clientY);
             setDragCandidate(model);
             setDragOffset(evt.clientY - evt.currentTarget.getBoundingClientRect().y)
@@ -115,7 +150,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
             }}
             ref={scrollRef}
             onScroll={onScroll}>
-            <div onMouseMove={dragMouveHandler}
+            <div onMouseMove={dragMoveHandler}
                 onMouseUp={dragUpHandler}
                 style={{
                     height: props.state.totalHeight,
