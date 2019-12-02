@@ -14,7 +14,6 @@ export class Grammar {
             const trailer: TrailerGrammarElement = {
                 type: 'trailer',
                 id: `${uniqId()}`,
-                children: [],
                 ref: undefined
             };
             elements.set(trailer.id, trailer);
@@ -30,7 +29,7 @@ export class Grammar {
                         
                         elements.set(content.id, {
                             id: content.id,
-                            children: children,
+                            content: children,
                             type: 'container',
                             ref: content.ref,
                             size: content.size
@@ -41,7 +40,6 @@ export class Grammar {
                         elements.set(content.id, {
                             id: content.id,
                             type: 'value',
-                            children: [],
                             ref: content.ref,
                             size: content.size,
                             codec: content.codec,
@@ -55,7 +53,7 @@ export class Grammar {
                         elements.set(content.id, {
                             id: content.id,
                             type: 'repeat',
-                            children: children,
+                            content: children,
                             ref: content.ref,
                             until: importElements(content.until)
                         });
@@ -67,7 +65,7 @@ export class Grammar {
                         elements.set(content.id, {
                             id: content.id,
                             type: 'if',
-                            children: children,
+                            content: children,
                             ref: content.ref,
                             condition: content.condition
                         });
@@ -110,22 +108,27 @@ export class Grammar {
                     return null;
                 }
                 // elements.set(id, el);
-                const children = exportNodes(el.children);
-                // Collect garbage in children
-                if (children.length !== el.children.length) {
-                    this.elements.set(id, {
-                        ...el,
-                        children: children.map(n => n.id)
-                    });
+
+                if ('content' in el) {
+                    const children = exportNodes(el.content);
+                    // Collect garbage in children
+                    if (children.length !== el.content.length) {
+                        this.elements.set(id, {
+                            ...el,
+                            content: children.map(n => n.id)
+                        });
+                    }
+                    // children.forEach(child => {
+                    //     parentsMapping.set(child.id, el.id);
+                    // });
+                    return {
+                        id,
+                        children: children,
+                        data: el
+                    }
                 }
-                // children.forEach(child => {
-                //     parentsMapping.set(child.id, el.id);
-                // });
-                return {
-                    id,
-                    children: children,
-                    data: el
-                }
+
+                return { id, data: el, children: [] };
             }).filter(removeNulls);
         };
         const nodes: TreeViewNode<GrammarElement>[] = exportNodes(this.roots);
@@ -168,7 +171,7 @@ export class Grammar {
                 return {
                     id: elem.id,
                     type: 'container',
-                    content: elem.children.length > 0 ? elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls) : [],
+                    content: elem.content.length > 0 ? elem.content.map(c => this.exportGrammarElement(c)).filter(removeNulls) : [],
                     ref: elem.ref,
                     size: elem.size
                 };
@@ -186,7 +189,7 @@ export class Grammar {
                     id: elem.id,
                     type: 'if',
                     condition: elem.condition,
-                    then: elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls),
+                    then: elem.content.map(c => this.exportGrammarElement(c)).filter(removeNulls),
                     ref: elem.ref
                 };
             case 'repeat':
@@ -194,7 +197,7 @@ export class Grammar {
                     id: elem.id,
                     type: 'repeat',
                     until: elem.until.map(c => this.exportGrammarElement(c)).filter(removeNulls),
-                    do: elem.children.map(c => this.exportGrammarElement(c)).filter(removeNulls),
+                    do: elem.content.map(c => this.exportGrammarElement(c)).filter(removeNulls),
                     ref: elem.ref
                 };
             case 'trailer':
@@ -209,7 +212,9 @@ export class Grammar {
         const elements = new Map(this.elements);
         elements.set(id, node);
         const parents = this.parentsMapping;
-        node.children.forEach(c => parents.set(c, id));
+        if ('content' in node) {
+            node.content.forEach(c => parents.set(c, id));
+        }
         return new Grammar(this.original, this.mimeType, this.roots, elements, parents);
     }
 
@@ -219,20 +224,30 @@ export class Grammar {
         if (!elements.has(node.id)) {
             elements.set(node.id, node);
         }
-        node.children.forEach(c => parents.set(c, node.id));
+        if ('content' in node) {
+            node.content.forEach(c => parents.set(c, node.id));
+        }
 
         return new Grammar(this.original, this.mimeType, arrayInsert(this.roots, position != null ? position : this.roots.length, node.id), elements, parents);
     }
 
     public createElement(_type: GrammarElement['type']): GrammarElement {
+        const trailer: TrailerGrammarElement = {
+            type: 'trailer',
+            id: `${uniqId()}`,
+            ref: undefined
+        };
         const element: GrammarElement = {
             type: 'container',
-            children: [],
+            content: [
+                trailer.id
+            ],
             id: `${uniqId()}`,
             ref: 'new element',
             size: undefined
         };
         this.elements.set(element.id, element);
+        this.elements.set(trailer.id, trailer);
         return element;
     }
     
@@ -266,7 +281,6 @@ export interface BaseGrammarElement<T extends string> {
     readonly type: T;
     readonly id: string;
     readonly ref: string | undefined;
-    readonly children: ReadonlyArray<string>;
 }
 
 export interface Size {
@@ -282,14 +296,17 @@ export interface ValueGrammarElement extends BaseGrammarElement<'value'> {
 
 export interface ContainerGrammarElement extends BaseGrammarElement<'container'> {
     readonly size: Size | undefined;
+    readonly content: ReadonlyArray<string>;
 }
 
 export interface RepeatGrammarElement extends BaseGrammarElement<'repeat'> {
     readonly until: ReadonlyArray<string>;
+    readonly content: ReadonlyArray<string>;
 }
 
 export interface IfGrammarElement extends BaseGrammarElement<'if'> {
     readonly condition: string;
+    readonly content: ReadonlyArray<string>;
 }
 
 export interface TrailerGrammarElement extends BaseGrammarElement<'trailer'> {

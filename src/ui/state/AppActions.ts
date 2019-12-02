@@ -163,8 +163,14 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
             parent = p2;
         }
 
-        // TODO: Handle this in the grammar to deal with the trailer automatically (ie. add a trailer when the first child is added. Or maybe don't allow child nodes in regular elements...)
-        grammar = grammar.update(parent.id, {...parent, children: arrayInsert(parent.children, position != null ? position : (parent.children.length - 1), newElement.id)});
+        // TODO: This should be handled in the grammar itself
+        if ('content' in parent) {
+            const updatedParent = {
+                ...parent, 
+                content: arrayInsert(parent.content, position != null ? position : (parent.content.length - 1), newElement.id)
+            };
+            grammar = grammar.update(parent.id, updatedParent);
+        }
     } else {
         grammar = grammar.addRoot(newElement, position);
     }
@@ -228,7 +234,6 @@ export const loadResult = action('loadResult', (state: AppState, result: {tree: 
     if (state.grammar == null || state.fileData == null) {
         return state;
     }
-    // TODO: Somehow, the grammar view is no longer linked to the structure view...
     state = loadStructure.reduce(state, result.tree);
     state = setAvailableCodecs.reduce(state, result.codecs);
     return { ...state, isAnalysisInProgress: false };

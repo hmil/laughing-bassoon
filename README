@@ -1,10 +1,6 @@
 Main app
 
 
-TODO: Arch problems stem from lack of proper domain model
-Create a domain model suitable for the UI structure (eg. no ad-hoc conversions for the tree component)
-Create transforms to go from the DTO to the domain and back.
-
 ROADMAP:
 
 ## MVP
