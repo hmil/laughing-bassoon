@@ -3,7 +3,7 @@ import { TreeViewNode, TreeViewState } from 'ui/widgets/tree-view/TreeViewState'
 
 import { AppState } from './AppState';
 import { Grammar, GrammarElement } from 'ui/domain/grammar/Grammar';
-import { arrayInsert } from 'std/readonly-arrays';
+import { arrayInsert, arrayRemove } from 'std/readonly-arrays';
 import { UiAnalyzerService } from 'ui/services/ui-analyzer-service';
 
 export interface BaseAction<Type extends string, DATA> {
@@ -135,7 +135,7 @@ export const editGrammarNode = action('editGrammarNode', (state: AppState, node:
     if (state.grammar == null) {
         return state;
     }
-    const grammar = state.grammar.update(node.id, node);
+    const grammar = state.grammar.update(node);
     return {
         ...state,
         grammar: grammar,
@@ -143,18 +143,46 @@ export const editGrammarNode = action('editGrammarNode', (state: AppState, node:
     };
 });
 
-export const createGrammarNode = action('createGrammarNode', (state: AppState, {parent, defaultProps, position, collapsed}: 
-        {parent: GrammarElement | undefined, defaultProps?: GrammarElement, position?: number, collapsed?: boolean}) => {
+export const moveGrammarNode = action('moveGrammarNode', (state: AppState, { elem, parent, position }: { elem: GrammarElement, parent?: GrammarElement, position: number}) => {
+    if (state.grammar == null) {
+        return state;
+    }
+    let grammar = state.grammar;
+
+    if (parent == null) {
+        if (elem.parent != null) {
+            const removeIdx = elem.parent.content.findIndex(p => p.id === elem.id);
+            if (removeIdx < 0) {
+                throw new Error('Node not found in parent');
+            }
+            elem.parent.content = arrayRemove(elem.parent.content, removeIdx);
+            grammar = grammar.update(elem.parent);
+        }
+    } else {
+        if (parent.id === elem.parent?.id) {
+            console.log('same parent');
+            const removeIdx = parent.content.findIndex(p => p.id === elem.id);
+            if (removeIdx < 0) {
+                throw new Error('Node not found in parent');
+            }
+            parent.content = arrayRemove(parent.content, removeIdx);
+        }
+        parent.content = arrayInsert(parent.content, position, elem);
+        grammar = grammar.update(parent);
+    }
+
+    return { ...state, grammar, grammarTree: grammar.asTreeViewState(state.grammarTree) };
+});
+
+export const createGrammarNode = action('createGrammarNode', (state: AppState, {parent, position, collapsed}: 
+        {parent: GrammarElement | undefined, position?: number, collapsed?: boolean}) => {
     if (state.grammar == null) {
         return state;
     }
 
-    // Create an populate new node
+    // Create and populate new node
     let grammar = state.grammar;
     const newElement = grammar.createElement('value');
-    if (defaultProps != null) {
-        grammar = grammar.update(newElement.id, Object.assign({}, defaultProps, { id: newElement.id }));
-    }
 
     // Add the new node to its parent
     if (parent != null) {
@@ -167,9 +195,9 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
         if ('content' in parent) {
             const updatedParent = {
                 ...parent, 
-                content: arrayInsert(parent.content, position != null ? position : (parent.content.length - 1), newElement.id)
+                content: arrayInsert(parent.content, position != null ? position : (parent.content.length - 1), newElement)
             };
-            grammar = grammar.update(parent.id, updatedParent);
+            grammar = grammar.update(updatedParent);
         }
     } else {
         grammar = grammar.addRoot(newElement, position);
@@ -183,7 +211,7 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
     let current: GrammarElement | undefined = parent;
     while (current) {
         parentChain.push(current);
-        current = grammar.getParent(current);
+        current = current.parent;
     }
     for (let i = parentChain.length - 1 ; i >= 0 ; i--) {
         const current = parentChain[i];
@@ -209,7 +237,7 @@ export const deleteGrammarNode = action('deleteGrammarNode', (state: AppState, n
     if (state.grammar == null) {
         return state;
     }
-    const parent = state.grammar.getParent(node);
+    const parent = node.parent;
     let grammar = state.grammar.removeElement(node.id);
     let grammarTree = grammar.asTreeViewState(state.grammarTree).unselectAll();
     if (parent != null) {

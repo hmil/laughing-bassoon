@@ -1,6 +1,9 @@
-import { ScopeTree, Scope } from './ScopeTree';
+import { Scope } from './Scope';
 import { ParserGrammar, GrammarInstruction, IfGrammarInstruction, RepeatGrammarInstruction, ContainerGrammarInstruction } from 'parser/domain/Grammar';
-export { Scope, ScopeTree } from './ScopeTree';
+import { ScopeTree } from './ScopeTree';
+
+export { Scope } from './Scope';
+export { ScopeTree } from './ScopeTree';
 
 export function createScopeTree(definition: ParserGrammar) {
     const tree = new ScopeTree();

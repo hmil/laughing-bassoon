@@ -11,3 +11,7 @@ export function arrayRemove<T>(input: ReadonlyArray<T>, index: number): T[] {
 export function arrayReplace<T>(input: ReadonlyArray<T>, index: number, replacement: T): T[] {
     return [...input.slice(0, index), replacement, ...input.slice(index + 1)];
 }
+
+export function arrayReplaceRange<T>(input: ReadonlyArray<T>, start: number, end: number, replacement: T[]): T[] {
+    return [...input.slice(0, start), ...replacement, ...input.slice(end)];
+}

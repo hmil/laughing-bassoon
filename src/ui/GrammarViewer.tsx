@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { GrammarElement, Grammar } from 'ui/domain/grammar/Grammar';
+import { GrammarElement } from 'ui/domain/grammar/Grammar';
 import { ContainerEditorHeader } from './editor/ContainerEditorHeader';
 import { ValueEditorHeader } from './editor/ValueEditorHeader';
 import { callback } from './react/hooks';
@@ -12,6 +12,7 @@ import {
     selectGrammarNode,
     unhoverGrammarNode,
     updateGrammarTree,
+    moveGrammarNode,
 } from './state/AppActions';
 import { AppContext } from './state/AppContext';
 import { AppActions } from './state/AppReducer';
@@ -29,13 +30,12 @@ export function GrammarViewer() {
     const { state, dispatch } = React.useContext(AppContext);
     const { analyzer } = React.useContext(ServicesContext);
 
-    
     const onOver = onOverCallback(dispatch);
     const onOut = onOutCallback(dispatch);
     const onSelect = onSelectCallback(dispatch);
     const onChange = onChangeCallback(dispatch);
-    const renderHeader = renderHeaderCallback(state.grammar, analyzer, state.availableCodecs, dispatch);
-    
+    const renderHeader = renderHeaderCallback(analyzer, state.availableCodecs, dispatch);
+
     return <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -56,14 +56,7 @@ export function GrammarViewer() {
                     onRequestDrop={onRequestDrop}
                     onDrop={(node, position, parent) => {
                         if (state.grammar != null) {
-                            const collapsed = state.grammarTree.isCollapsed(node.id);
-                            dispatch(deleteGrammarNode(node.data));
-                            dispatch(createGrammarNode({
-                                parent: parent?.data,
-                                position,
-                                defaultProps: node.data,
-                                collapsed
-                            }));
+                            dispatch(moveGrammarNode({ elem: node.data, parent: parent?.data, position }));
                             dispatch(analyzeFile(analyzer));
                         }
                     }}
@@ -96,8 +89,8 @@ export function GrammarViewer() {
     </div>
 }
 
-function onRequestDrag() {
-    return true;
+function onRequestDrag(node: TreeViewModel<GrammarElement>) {
+    return node.data.type !== 'trailer';
 }
 
 function onRequestDrop(model: TreeViewModel<GrammarElement>) {
@@ -110,7 +103,7 @@ const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: 
 const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => dispatch(selectGrammarNode(node.data)));
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-const renderHeaderCallback = callback((grammar: Grammar | null, analyzer: UiAnalyzerService, availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => {
+const renderHeaderCallback = callback((analyzer: UiAnalyzerService, availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => {
     switch (node.data.type) {
         case 'value':
             return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch} />;
@@ -120,7 +113,7 @@ const renderHeaderCallback = callback((grammar: Grammar | null, analyzer: UiAnal
             return <div style={{
                 paddingTop: '6px'
             }}><Button onClick={() => {
-                const parent = grammar?.getParent(node.data);
+                const parent = node.data.parent;
                 dispatch(createGrammarNode({ parent }));
                 dispatch(analyzeFile(analyzer));
             }} value={'+'} size={'sm'}/></div>

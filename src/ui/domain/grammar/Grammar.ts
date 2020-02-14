@@ -1,84 +1,79 @@
 import { TreeViewState, TreeViewNode } from 'ui/widgets/tree-view/TreeViewState';
 import { uniqId } from 'parser/uid';
 import { ParserGrammar, GrammarInstruction } from 'parser/domain/Grammar';
+import { Property, Entity } from 'datastore/dsl';
+import { createStore } from 'datastore/store';
 import { arrayInsert } from 'std/readonly-arrays';
+import { Store } from 'datastore/types';
 
+const ROOT_ID = 'root';
 
 export class Grammar {
 
+    private static createTrailer(db: Store<GrammarElement>) {
+        return db.create(TrailerGrammarElement, {
+            type: 'trailer',
+            id: `${uniqId()}`,
+            ref: undefined,
+            content: []
+        });
+    }
+
     public static importFromParser(def: ParserGrammar): Grammar {
-        const elements: Map<string, GrammarElement> = new Map();
-        const parents: Map<string, string> = new Map();
+        let db: Store<GrammarElement> = createStore(ValueGrammarElement, ContainerGrammarElement, RepeatGrammarElement, IfGrammarElement, TrailerGrammarElement);
 
-        function createTrailer(): string {
-            const trailer: TrailerGrammarElement = {
-                type: 'trailer',
-                id: `${uniqId()}`,
-                ref: undefined
-            };
-            elements.set(trailer.id, trailer);
-            return trailer.id;
-        }
-
-        function importElements(source: ReadonlyArray<GrammarInstruction>): string[] {
+        function importElements(source: ReadonlyArray<GrammarInstruction>): GrammarElement[] {
             return source.map(content => {
                 switch (content.type) {
-                    case 'container': {
-                        const children = [...importElements(content.content), createTrailer()];
-                        children.forEach(c => parents.set(c, content.id));
-                        
-                        elements.set(content.id, {
+                    case 'container': 
+                        return db.create(ContainerGrammarElement, {
                             id: content.id,
-                            content: children,
+                            content: [...importElements(content.content), Grammar.createTrailer(db)],
                             type: 'container',
                             ref: content.ref,
                             size: content.size
                         });
-                        break;
-                    }
-                    case 'fixed': {
-                        elements.set(content.id, {
+                    case 'fixed':
+                        return db.create(ValueGrammarElement, {
                             id: content.id,
                             type: 'value',
                             ref: content.ref,
                             size: content.size,
                             codec: content.codec,
-                            constraints: content.constraints
+                            constraints: content.constraints,
+                            content: []
                         });
-                        break;
-                    }
-                    case 'repeat': {
-                        const children = [...importElements(content.do), createTrailer()];
-                        children.forEach(c => parents.set(c, content.id));
-                        elements.set(content.id, {
+                    case 'repeat':
+                        return db.create(RepeatGrammarElement, {
                             id: content.id,
                             type: 'repeat',
-                            content: children,
+                            content: [...importElements(content.do), Grammar.createTrailer(db)],
                             ref: content.ref,
                             until: importElements(content.until)
                         });
-                        break;
-                    }
-                    case 'if': {
-                        const children = [...importElements(content.then || []), createTrailer()];
-                        children.forEach(c => parents.set(c, content.id));
-                        elements.set(content.id, {
+                    case 'if':
+                        return db.create(IfGrammarElement, {
                             id: content.id,
                             type: 'if',
-                            content: children,
+                            content: [...importElements(content.then || []), Grammar.createTrailer(db)],
                             ref: content.ref,
                             condition: content.condition
                         });
-                        break;
-                    }
+                    default:
+                        throw new Error(`Unknown content type ${content.type}`);
                 }
-                return content.id;
             });
         }
 
         const roots = importElements(def.root);
 
-        return new Grammar(def, def.type, roots, elements, parents);
+        const root = db.create(ContainerGrammarElement, {
+            content: roots,
+            id: ROOT_ID,
+            type: 'container'
+        });
+        db = db.save(root);
+        return new Grammar(def, def.type, db);
     }
 
     private _asParserGrammar: ParserGrammar | null = null;
@@ -86,59 +81,26 @@ export class Grammar {
     constructor(
             private original: ParserGrammar,
             private mimeType: string,
-            private roots: string[],
-            private elements: Map<string, GrammarElement>,
-            private parentsMapping: Map<string, string>) {
+            private db: Store<GrammarElement>) {
     }
 
-    public getRootElements(): GrammarElement[] {
-        return this.roots.map(id => this.getElement(id)).filter(removeNulls);
+    public getRootElements(): ReadonlyArray<GrammarElement> {
+        const root = this.db.get(ROOT_ID);
+        if (root == null) {
+            throw new Error('No root in grammar!');
+        }
+        return root.content;
     }
 
     public asTreeViewState(previous?: TreeViewState<GrammarElement>): TreeViewState<GrammarElement> {
-
-        // TODO Prune garbage
-        // const elements = new Map<string, GrammarElement>();
-        // const parentsMapping = new Map<string, string>();
-
-        const exportNodes = (nodes: readonly string[]): TreeViewNode<GrammarElement>[] => {
-            return nodes.map(id => {
-                const el = this.elements.get(id);
-                if (el == null) {
-                    return null;
-                }
-                // elements.set(id, el);
-
-                if ('content' in el) {
-                    const children = exportNodes(el.content);
-                    // Collect garbage in children
-                    if (children.length !== el.content.length) {
-                        this.elements.set(id, {
-                            ...el,
-                            content: children.map(n => n.id)
-                        });
-                    }
-                    // children.forEach(child => {
-                    //     parentsMapping.set(child.id, el.id);
-                    // });
-                    return {
-                        id,
-                        children: children,
-                        data: el
-                    }
-                }
-
-                return { id, data: el, children: [] };
-            }).filter(removeNulls);
+        const exportNodes = (nodes: readonly GrammarElement[]): TreeViewNode<GrammarElement>[] => {
+            return nodes.filter(removeNulls).map(el => ({
+                id: el.id,
+                children: exportNodes(el.content),
+                data: el
+            }));
         };
-        const nodes: TreeViewNode<GrammarElement>[] = exportNodes(this.roots);
-        if (nodes.length !== this.roots.length) {
-            // There is some garbage to collect
-            this.roots = nodes.map(n => n.id);
-        }
-
-        // this.elements = elements;
-        // this.parentsMapping = parentsMapping;
+        const nodes: TreeViewNode<GrammarElement>[] = exportNodes(this.getRootElements());
 
         if (previous) {
             return previous.setData(nodes);
@@ -149,7 +111,7 @@ export class Grammar {
 
     public get asParserGrammar(): ParserGrammar {
         if (this._asParserGrammar == null) {
-            const root = this.roots.map(root => this.exportGrammarElement(root)).filter(removeNulls);
+            const root = this.getRootElements().map(root => this.exportGrammarElement(root)).filter(removeNulls);
             this._asParserGrammar = {
                 codecs: this.original.codecs,
                 root: root,
@@ -159,8 +121,7 @@ export class Grammar {
         return this._asParserGrammar;
     }
 
-    private exportGrammarElement(id: string): GrammarInstruction | null {
-        const elem = this.getElement(id);
+    private exportGrammarElement(elem: GrammarElement): GrammarInstruction | null {
         if (elem == null) {
             console.log('No such element');
             return null;
@@ -205,69 +166,108 @@ export class Grammar {
         }
     }
 
-    public update(id: string, node: GrammarElement): Grammar {
-        if (id !== node.id) {
-            throw new Error('Trying to replace a node with a different id');
+    public update(node: GrammarElement): Grammar {
+        const record = this.db.get(node.id);
+        if (record == null) {
+            throw new Error('No record to update!');
         }
-        const elements = new Map(this.elements);
-        elements.set(id, node);
-        const parents = this.parentsMapping;
-        if ('content' in node) {
-            node.content.forEach(c => parents.set(c, id));
+        for (let k of Object.keys(node) as Array<keyof typeof node>) {
+            record[k] = node[k] as any;
         }
-        return new Grammar(this.original, this.mimeType, this.roots, elements, parents);
+        return new Grammar(this.original, this.mimeType, this.db.save(record));
     }
 
     public addRoot(node: GrammarElement, position?: number): Grammar {
-        const elements = new Map(this.elements);
-        const parents = new Map(this.parentsMapping);
-        if (!elements.has(node.id)) {
-            elements.set(node.id, node);
+        const root = this.db.get(ROOT_ID);
+        if (root == null) {
+            throw new Error('Grammar has no root!');
         }
-        if ('content' in node) {
-            node.content.forEach(c => parents.set(c, node.id));
-        }
+        root.content = arrayInsert(root.content, position || root.content.length, node);
 
-        return new Grammar(this.original, this.mimeType, arrayInsert(this.roots, position != null ? position : this.roots.length, node.id), elements, parents);
+        return new Grammar(this.original, this.mimeType, this.db.save(root));
     }
 
     public createElement(_type: GrammarElement['type']): GrammarElement {
-        const trailer: TrailerGrammarElement = {
-            type: 'trailer',
-            id: `${uniqId()}`,
-            ref: undefined
-        };
-        const element: GrammarElement = {
+        const trailer = Grammar.createTrailer(this.db);
+        return this.db.create(ContainerGrammarElement, {
             type: 'container',
             content: [
-                trailer.id
+                trailer
             ],
             id: `${uniqId()}`,
             ref: 'new element',
             size: undefined
-        };
-        this.elements.set(element.id, element);
-        this.elements.set(trailer.id, trailer);
-        return element;
+        });
     }
     
     public removeElement(id: string): Grammar {
-        const elements = new Map(this.elements);
-        elements.delete(id);
-        return new Grammar(this.original, this.mimeType, this.roots, elements, this.parentsMapping);
+        return new Grammar(this.original, this.mimeType, this.db.delete(id));
     }
 
     public getElement(id: string): GrammarElement | undefined {
-        return this.elements.get(id);
+        return this.db.get(id);
     }
+}
 
-    public getParent(node: GrammarElement): GrammarElement | undefined {
-        const parentId = this.parentsMapping.get(node.id);
-        if (parentId == null) {
-            return undefined;
-        }
-        return this.getElement(parentId);
-    }
+@Entity()
+export class BaseGrammarElement<T extends string> {
+
+    @Property()
+    public id!: string;
+
+    @Property()
+    public type!: T;
+
+    @Property()
+    public ref?: string;
+
+    @Property({ toMany: true, fk: [BaseGrammarElement, 'parent'] })
+    public content: ReadonlyArray<GrammarElement> = [];
+
+    @Property({ toOne: true })
+    public parent?: GrammarElement;
+}
+
+@Entity()
+export class ValueGrammarElement extends BaseGrammarElement<'value'> {
+
+    @Property()
+    public codec?: string;
+
+    @Property()
+    public size: Size = {
+        value: '0',
+        unit: 'bit'
+    };
+
+    @Property()
+    public constraints?: { type: 'isNull' }[] | undefined;
+}
+
+@Entity()
+export class ContainerGrammarElement extends BaseGrammarElement<'container'> {
+    
+    @Property()
+    public size?: Size;
+}
+
+@Entity()
+export class RepeatGrammarElement extends BaseGrammarElement<'repeat'> {
+
+    @Property()
+    public until: ReadonlyArray<GrammarElement> = [];
+}
+
+@Entity()
+export class IfGrammarElement extends BaseGrammarElement<'if'> {
+
+    @Property()
+    public condition: string = '';
+}
+
+@Entity()
+export class TrailerGrammarElement extends BaseGrammarElement<'trailer'> {
+
 }
 
 export interface Codec {
@@ -277,40 +277,11 @@ export interface Codec {
     readonly type: string;
 }
 
-export interface BaseGrammarElement<T extends string> {
-    readonly type: T;
-    readonly id: string;
-    readonly ref: string | undefined;
-}
-
 export interface Size {
     readonly value: string;
     readonly unit: 'bit' | 'byte';
 }
 
-export interface ValueGrammarElement extends BaseGrammarElement<'value'> {
-    readonly codec: string | undefined;
-    readonly size: Size;
-    readonly constraints: { type: 'isNull' }[] | undefined;
-}
-
-export interface ContainerGrammarElement extends BaseGrammarElement<'container'> {
-    readonly size: Size | undefined;
-    readonly content: ReadonlyArray<string>;
-}
-
-export interface RepeatGrammarElement extends BaseGrammarElement<'repeat'> {
-    readonly until: ReadonlyArray<string>;
-    readonly content: ReadonlyArray<string>;
-}
-
-export interface IfGrammarElement extends BaseGrammarElement<'if'> {
-    readonly condition: string;
-    readonly content: ReadonlyArray<string>;
-}
-
-export interface TrailerGrammarElement extends BaseGrammarElement<'trailer'> {
-}
 
 export type GrammarElement = ValueGrammarElement | ContainerGrammarElement | RepeatGrammarElement| IfGrammarElement | TrailerGrammarElement;
 

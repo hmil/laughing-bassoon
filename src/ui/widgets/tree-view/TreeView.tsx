@@ -3,7 +3,7 @@ import { callback } from 'ui/react/hooks';
 
 import { TreeViewContext } from './TreeViewContext';
 import { TreeViewElement } from './TreeViewElement';
-import { TreeViewState, TreeViewModel, DRAG_PLACEHOLDER } from './TreeViewState';
+import { TreeViewState, TreeViewModel } from './TreeViewState';
 import { H_LINE_BOTTOM } from 'ui/styles/relief';
 import { If } from 'ui/react/tsx-helpers';
 
@@ -26,11 +26,11 @@ interface ScrollRange {
     end: number;
 }
 
-const PLACEHOLDER = <div>
+const Placeholder = (height: number) => <div>
     <div style={{
         margin: '2px 4px',
         border: '1px #999 dashed',
-        height: '26px'
+        height: `${(height - 4)}px`
     }} />
 </div>;
 
@@ -73,12 +73,12 @@ export function TreeView<T>(props: TreeViewProps<T>) {
     }, [scrollRef.current, props.state]);
 
     function dragUpHandler() {
-        if (props.state.draggedNode != null) {
+        if (props.state.draggedNodes != null) {
             if (props.onDrop != null) {
                 setDragCandidate(null);
                 props.onChange(props.state.stopDragging());
                 const [parent, position] = props.state.getDropInfo();
-                props.onDrop(props.state.draggedNode, position, parent);
+                props.onDrop(props.state.draggedNodes[0], position, parent);
             }
         }
         if (dragCandidate != null){
@@ -100,7 +100,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
             setDragAnchor(currentY);
             const relativeY = evt.clientY - evt.currentTarget.getBoundingClientRect().y;
             const index = props.state.getIndexAtY(relativeY, false);
-            const placeholderPos = props.state.data.indexOf(DRAG_PLACEHOLDER);
+            const placeholderPos = props.state.data.findIndex(t => t.type == 'drag-placeholder');
             const actualIndex = placeholderPos >= index ? index - 1 : index;
             const dropTarget = props.state.data[Math.max(0, actualIndex)];
             if (dropTarget.type === 'spacer' || dropTarget.type === 'model' && ( props.onRequestDrop == null || props.onRequestDrop(dropTarget) )) {
@@ -167,7 +167,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                         if (d.type === 'spacer') {
                             return <div style={H_LINE_BOTTOM} />
                         } else if (d.type === 'drag-placeholder') {
-                            return PLACEHOLDER;
+                            return Placeholder(d.height);
                         } else {
                             return <TreeViewElement data={d} key={d.id} onDragDown={dragDownHandler(d)}/>
                         }
@@ -181,7 +181,7 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                         width: '100%',
                         top: `${dragAnchor - dragOffset}px`
                     }}>
-                        <TreeViewElement data={props.state.draggedNode!} onDragDown={noop}/>
+                        {props.state.draggedNodes?.map(n => <TreeViewElement data={n} onDragDown={noop}/>)}
                     </div>
                 </If>
             </div>
