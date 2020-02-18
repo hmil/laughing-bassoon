@@ -34,7 +34,7 @@ export class Expression {
         const match = this.expression.match(/^\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*([%+/><-])\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*([%+/><-])\s*(\$[a-zA-Z.][a-zA-Z0-9/.]+|\d+)\s*$/);
 
         if (!match) {
-            throw new Error('Invalid expression');
+            throw new Error(`Invalid expression: "${this.expression}"`);
         }
         const lhs = match[1];
         const operator1 = match[2];

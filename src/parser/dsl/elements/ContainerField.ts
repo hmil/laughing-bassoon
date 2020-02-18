@@ -1,6 +1,7 @@
 import * as t from 'io-ts';
 import { Container } from '../core/Container';
 import { allElements } from '.';
+import { AnyConstraint } from '../constraints';
 
 export const ContainerField = t.intersection([
     t.type({
@@ -8,9 +9,18 @@ export const ContainerField = t.intersection([
     }),
     t.partial({
         ref: t.string,
-        size: t.union([t.number, t.string])
+        codec: t.string,
+        constraints: t.array(AnyConstraint)
     }),
-    Container
+    Container,
+    t.union([
+        t.partial({
+            size: t.union([t.number, t.string])
+        }),
+        t.partial({
+            bitSize: t.union([t.number, t.string])
+        })
+    ])
 ]);
 
 declare module "." {

@@ -182,7 +182,7 @@ export const createGrammarNode = action('createGrammarNode', (state: AppState, {
 
     // Create and populate new node
     let grammar = state.grammar;
-    const newElement = grammar.createElement('value');
+    const newElement = grammar.createElement('container');
 
     // Add the new node to its parent
     if (parent != null) {

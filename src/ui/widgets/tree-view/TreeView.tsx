@@ -26,11 +26,11 @@ interface ScrollRange {
     end: number;
 }
 
-const Placeholder = (height: number) => <div>
+const Placeholder = (props: {height: number }) => <div>
     <div style={{
         margin: '2px 4px',
         border: '1px #999 dashed',
-        height: `${(height - 4)}px`
+        height: `${(props.height - 4)}px`
     }} />
 </div>;
 
@@ -163,11 +163,11 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                     width: '100%',
                     overflow: 'hidden'
                 }}>
-                    { props.state.data.slice(range.start, range.end).map(d => {
+                    { props.state.data.slice(range.start, range.end).map((d, n) => {
                         if (d.type === 'spacer') {
-                            return <div style={H_LINE_BOTTOM} />
+                            return <div key={`spacer_${n}`} style={H_LINE_BOTTOM} />
                         } else if (d.type === 'drag-placeholder') {
-                            return Placeholder(d.height);
+                            return <Placeholder key={'placeholder'} height={d.height} />
                         } else {
                             return <TreeViewElement data={d} key={d.id} onDragDown={dragDownHandler(d)}/>
                         }

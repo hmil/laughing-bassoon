@@ -37,17 +37,10 @@ function importContent(c: AnyElement): GrammarInstruction {
                 id,
                 type: 'container',
                 content: c.content?.map(importContent) || [],
-                ref: c.ref,
-                size: importSize(c)
-            };
-        case 'fixed':
-            return {
-                id,
-                type: 'fixed',
                 codec: c.codec,
                 constraints: c.constraints,
                 ref: c.ref,
-                size: importSize(c) || { value: '', unit: 'byte' }
+                size: importSize(c)
             };
         case 'flags':
             throw new Error('Who needs flags anyways?');
@@ -108,13 +101,9 @@ export interface BaseGrammarInstruction<T extends string> {
     readonly ref: string | undefined;
 }
 
-export interface FixedGrammarInstruction extends BaseGrammarInstruction<'fixed'> {
-    readonly codec: string | undefined;
-    readonly size: Size;
-    readonly constraints: { type: 'isNull' }[] | undefined;
-}
-
 export interface ContainerGrammarInstruction extends BaseGrammarInstruction<'container'> {
+    readonly constraints: { type: 'isNull' }[] | undefined;
+    readonly codec: string | undefined;
     readonly size: Size | undefined;
     readonly content: ReadonlyArray<GrammarInstruction>;
 }
@@ -129,7 +118,4 @@ export interface IfGrammarInstruction extends BaseGrammarInstruction<'if'> {
     readonly then: ReadonlyArray<GrammarInstruction>;
 }
 
-export interface TrailerGrammarInstruction extends BaseGrammarInstruction<'trailer'> {
-}
-
-export type GrammarInstruction = FixedGrammarInstruction | ContainerGrammarInstruction | RepeatGrammarInstruction| IfGrammarInstruction | TrailerGrammarInstruction;
+export type GrammarInstruction = ContainerGrammarInstruction | RepeatGrammarInstruction | IfGrammarInstruction;

@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import { GrammarElement } from 'ui/domain/grammar/Grammar';
 import { ContainerEditorHeader } from './editor/ContainerEditorHeader';
-import { ValueEditorHeader } from './editor/ValueEditorHeader';
 import { callback } from './react/hooks';
 import {
     analyzeFile,
@@ -103,10 +102,10 @@ const onOutCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: 
 const onSelectCallback = callback((dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => dispatch(selectGrammarNode(node.data)));
 
 // TODO: Create an adapter for each node type to render the title and the editor for that node type.
-const renderHeaderCallback = callback((analyzer: UiAnalyzerService, availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => {
+const renderHeaderCallback = callback((analyzer: UiAnalyzerService, _availableCodecs: string[], dispatch: React.Dispatch<AppActions>) => (node: TreeViewModel<GrammarElement>) => {
     switch (node.data.type) {
-        case 'value':
-            return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch} />;
+        // case 'value':
+        //     return <ValueEditorHeader value={node.data} availableCodecs={availableCodecs} dispatch={dispatch} />;
         case 'container':
             return <ContainerEditorHeader value={node.data} dispatch={dispatch} />;
         case 'trailer':

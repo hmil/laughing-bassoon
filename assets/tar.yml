@@ -13,12 +13,12 @@ content:
       - type: container
         ref: end clearence
         content:
-          - type: fixed
+          - type: container
             ref: empty block
             size: 512
             constraints:
               - type: isNull
-          - type: fixed
+          - type: container
             ref: empty block
             size: 512
             constraints:
@@ -31,87 +31,87 @@ content:
           ref: header
           size: 512
           content:
-          - type: fixed
+          - type: container
             ref: name
             size: 100
             codec: cstring
-          - type: fixed
+          - type: container
             ref: mode
             size: 8
             codec: octal
-          - type: fixed
+          - type: container
             ref: uid
             size: 8
             codec: cstring
-          - type: fixed
+          - type: container
             ref: gid
             size: 8
             codec: cstring
-          - type: fixed
+          - type: container
             ref: size
             size: 12
             codec: octal
-          - type: fixed
+          - type: container
             ref: mtime
             size: 12
             codec: octal
-          - type: fixed
+          - type: container
             ref: chksum
             size: 8
             codec: octal
-          - type: fixed
+          - type: container
             ref: typeflag
             size: 1
-          - type: fixed
+          - type: container
             ref: linkname
             size: 100
             codec: cstring
-          - type: fixed
+          - type: container
             ref: magic
             size: 6
             codec: cstring
-          - type: fixed
+          - type: container
             ref: version
             size: 2
             codec: octal
-          - type: fixed
+          - type: container
             ref: uname
             size: 32
             codec: cstring
-          - type: fixed
+          - type: container
             ref: gname
             size: 32
             codec: cstring
-          - type: fixed
+          - type: container
             ref: devmajor
             size: 8
             codec: cstring
-          - type: fixed
+          - type: container
             ref: devminor
             size: 8
             codec: cstring
-          - type: fixed
+          - type: container
             ref: prefix
             size: 131
             codec: cstring
         - type: if
           cond: "$header/size > 0"
           then:
-          - type: fixed
+          - type: container
             ref: content
             size: "$header/size"
-          - type: fixed
+          - type: container
             ref: padding
             size: "512 - $header/size % 512"
   - type: container
     ref: end clearence
     content:
-      - type: fixed
+      - type: container
         ref: empty block
         size: 512
         constraints:
           - type: isNull
-      - type: fixed
+      - type: container
         ref: empty block
         size: 512
         constraints:

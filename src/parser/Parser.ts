@@ -6,10 +6,11 @@ import { fold } from 'fp-ts/lib/Either';
 import { createScopeTree, Scope } from './scoping';
 import { ScopeTree } from './scoping/ScopeTree';
 import { AbtRoot, AbtNode } from './domain/Abt';
-import { ParserGrammar, GrammarInstruction, IfGrammarInstruction, RepeatGrammarInstruction, ContainerGrammarInstruction, FixedGrammarInstruction } from './domain/Grammar';
+import { ParserGrammar, GrammarInstruction, IfGrammarInstruction, RepeatGrammarInstruction, ContainerGrammarInstruction } from './domain/Grammar';
 import { ParserThread } from './Thread'; 
 import { CodecLibrary } from './codec/CodecLibrary';
 import { createCodecLibrary } from './codec';
+import { checkExhaustiveSwitch } from 'std/fuckery';
 
 
 export class Parser {
@@ -31,78 +32,12 @@ export class Parser {
         this.openList.push(thread);
     }
 
-    private processFixed(elem: FixedGrammarInstruction, thread: ParserThread): void {
+    private processContainer(elem: ContainerGrammarInstruction, thread: ParserThread): void {
+        thread.log(`Container: ${elem.ref}`);
+
         if ('bitSize' in elem) { // TODO: handle bit size
             throw new Error('Bit sizing not yet supported');
         }
-
-        let name = elem.ref || '<field>';
-
-        this.resolveExpression(thread.context, this.scopeTree.getScopeForNode(elem), elem.size.value, size => {
-            if (size == null) {
-                thread.addError('Cannot resolve size');
-                thread.produce({
-                    type: 'generic',
-                    id: uniqId(),
-                    start: thread.offset.offset,
-                    end: thread.offset.offset,
-                    name: '[ERR] cannot resolve size',
-                    origin: elem.id
-                });
-                return;
-            }
-
-            if (elem.constraints != null) {
-                // TODO: implement actual constraints
-                const slice = this.data.slice(thread.offset.offset, thread.offset.offset + size);
-                for (let i = 0 ; i < slice.length ; i++) {
-                    if (slice[i] !== 0) {
-                        thread.addError(`Constraint failed: byte 0x${(thread.offset.offset + i).toString(16)} is not null.`);
-                        name += ` [Error: constraint]`;
-                        break;
-                    }
-                }
-            }
-
-            const nextOffset = thread.offset.add(new Offset(size, 0));
-            const codec = this.codecLibrary.resolve(elem.codec);
-
-            if (codec != null) {
-                pipe(
-                    codec.decode(this.data.slice(thread.offset.offset, nextOffset.offset)),
-                    fold(
-                        err => {
-                            name += ` [${err}]`;
-                            thread.addError(err);
-                        },
-                        value => {
-                            if (elem.ref != null) {
-                                if (typeof value === 'number' && !isNaN(value)) {
-                                    this.provideVariable(thread.context, this.scopeTree.getScopeForNode(elem), elem.ref, value);
-                                }
-                            }
-                            name += ` = ${value}`;
-                        }
-                    )
-                );
-            }
-    
-            thread.produce({
-                type: 'generic',
-                id: uniqId(),
-                start: thread.offset.offset,
-                end: thread.offset.offset + size,
-                name: name,
-                origin: elem.id
-            });
-    
-            thread.moveBy(new Offset(size, 0));
-            this.resume(thread);
-        });
-    }
-
-    private processContainer(elem: ContainerGrammarInstruction, thread: ParserThread): void {
-        thread.log(`Container: ${elem.ref}`);
 
         const id = uniqId();
         const endVariable = `system.container@${id}.end`;
@@ -123,6 +58,58 @@ export class Parser {
             this.provideVariable(thread.context, scope, endVariable, 0);
         }
 
+        const finalize = (end: Offset) => {
+
+            let name = elem.ref || '<field>';
+
+            if (elem.constraints != null) {
+                // TODO: implement actual constraints
+                const slice = this.data.slice(thread.offset.offset, end.offset);
+                for (let i = 0 ; i < slice.length ; i++) {
+                    if (slice[i] !== 0) {
+                        thread.addError(`Constraint failed: byte 0x${(thread.offset.offset + i).toString(16)} is not null.`);
+                        name += ` [Error: constraint]`;
+                        break;
+                    }
+                }
+            }
+
+            const codec = this.codecLibrary.resolve(elem.codec);
+
+            if (codec != null) {
+                pipe(
+                    codec.decode(this.data.slice(thread.offset.offset, end.offset)),
+                    fold(
+                        err => {
+                            name += ` [${err}]`;
+                            thread.addError(err);
+                        },
+                        value => {
+                            if (elem.ref != null) {
+                                if (typeof value === 'number' && !isNaN(value)) {
+                                    this.provideVariable(thread.context, this.scopeTree.getScopeForNode(elem), elem.ref, value);
+                                }
+                            }
+                            name += ` = ${value}`;
+                        }
+                    )
+                );
+            }
+
+            thread.produce({
+                type: 'generic',
+                id: uniqId(),
+                start: thread.offset.offset,
+                end: end.offset,
+                name: name,
+                children,
+                origin: elem.id
+            });
+
+            thread.moveTo(end);
+            this.resume(thread);
+        }
+
         if (elem.size != null) {
             this.resolveExpression(thread.context, scope, elem.size.value, size => {
                 if (size == null) {
@@ -139,18 +126,7 @@ export class Parser {
                     return;
                 }
 
-                thread.produce({
-                    type: 'generic',
-                    id: uniqId(),
-                    start: thread.offset.offset,
-                    end: thread.offset.offset + size,
-                    name: elem.ref || '<container>',
-                    children,
-                    origin: elem.id
-                });
-
-                thread.moveBy(new Offset(size, 0));
-                this.resume(thread);
+                finalize(thread.offset.add(new Offset(size, 0)))
             });
         } else {
             this.requestVariable(thread.context, scope, endVariable, end => {
@@ -168,18 +144,7 @@ export class Parser {
                     return;
                 }
 
-                thread.produce({
-                    type: 'generic',
-                    id: uniqId(),
-                    start: thread.offset.offset,
-                    end: end,
-                    name: elem.ref || '<container>',
-                    children,
-                    origin: elem.id
-                });
-
-                thread.moveTo(new Offset(end, 0));
-                this.resume(thread);
+                finalize(new Offset(end, 0));
             });
         }
     }
@@ -237,8 +202,8 @@ export class Parser {
 
     private processNode(elem: GrammarInstruction, head: ParserThread): void {
         switch (elem.type) {
-            case 'fixed':
-                return this.processFixed(elem, head);
+            // case 'fixed':
+            //     return this.processFixed(elem, head);
             case 'container':
                 return this.processContainer(elem, head);
             case 'if':
@@ -246,7 +211,7 @@ export class Parser {
             case 'repeat':
                 return this.processRepeat(elem, head);
             default:
-                throw new Error(`unknown elem type: ${elem.type}`);
+                checkExhaustiveSwitch(elem);
         }
     }
 
@@ -294,6 +259,7 @@ export class Parser {
         return root;
     }
 
+    // TODO: Turn this callback into a promise?
     private resolveExpression(context: string, scope: Scope, v: string | number, cb: (variable: number | null) => void): void {
         if (typeof v === 'number') {
             cb(v);

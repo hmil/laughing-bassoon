@@ -6,7 +6,6 @@
 export { ParserDefinition } from './ParserDefinition';
 
 // Parser elements
-export { FixedField } from './elements/FixedField';
 export { Flags } from './elements/Flags';
 export { IfField } from './elements/IfField';
 export { ContainerField } from './elements/ContainerField';

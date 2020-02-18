@@ -5,6 +5,7 @@ import { Property, Entity } from 'datastore/dsl';
 import { createStore } from 'datastore/store';
 import { arrayInsert } from 'std/readonly-arrays';
 import { Store } from 'datastore/types';
+import { checkExhaustiveSwitch } from 'std/fuckery';
 
 const ROOT_ID = 'root';
 
@@ -20,7 +21,7 @@ export class Grammar {
     }
 
     public static importFromParser(def: ParserGrammar): Grammar {
-        let db: Store<GrammarElement> = createStore(ValueGrammarElement, ContainerGrammarElement, RepeatGrammarElement, IfGrammarElement, TrailerGrammarElement);
+        let db: Store<GrammarElement> = createStore(ContainerGrammarElement, RepeatGrammarElement, IfGrammarElement, TrailerGrammarElement);
 
         function importElements(source: ReadonlyArray<GrammarInstruction>): GrammarElement[] {
             return source.map(content => {
@@ -31,17 +32,9 @@ export class Grammar {
                             content: [...importElements(content.content), Grammar.createTrailer(db)],
                             type: 'container',
                             ref: content.ref,
-                            size: content.size
-                        });
-                    case 'fixed':
-                        return db.create(ValueGrammarElement, {
-                            id: content.id,
-                            type: 'value',
-                            ref: content.ref,
                             size: content.size,
                             codec: content.codec,
-                            constraints: content.constraints,
-                            content: []
+                            constraints: content.constraints
                         });
                     case 'repeat':
                         return db.create(RepeatGrammarElement, {
@@ -60,7 +53,7 @@ export class Grammar {
                             condition: content.condition
                         });
                     default:
-                        throw new Error(`Unknown content type ${content.type}`);
+                        checkExhaustiveSwitch(content);
                 }
             });
         }
@@ -134,16 +127,9 @@ export class Grammar {
                     type: 'container',
                     content: elem.content.length > 0 ? elem.content.map(c => this.exportGrammarElement(c)).filter(removeNulls) : [],
                     ref: elem.ref,
-                    size: elem.size
-                };
-            case 'value':
-                return {
-                    id: elem.id,
-                    type: 'fixed',
+                    size: elem.size,
                     codec: elem.codec,
-                    ref: elem.ref,
-                    constraints: elem.constraints,
-                    size: elem.size
+                    constraints: elem.constraints
                 };
             case 'if':
                 return {
@@ -229,26 +215,19 @@ export class BaseGrammarElement<T extends string> {
 }
 
 @Entity()
-export class ValueGrammarElement extends BaseGrammarElement<'value'> {
+export class ContainerGrammarElement extends BaseGrammarElement<'container'> {
 
     @Property()
     public codec?: string;
 
     @Property()
-    public size: Size = {
+    public constraints?: { type: 'isNull' }[] | undefined;
+    
+    @Property()
+    public size?: Size = {
         value: '0',
         unit: 'bit'
     };
-
-    @Property()
-    public constraints?: { type: 'isNull' }[] | undefined;
-}
-
-@Entity()
-export class ContainerGrammarElement extends BaseGrammarElement<'container'> {
-    
-    @Property()
-    public size?: Size;
 }
 
 @Entity()
@@ -283,7 +262,7 @@ export interface Size {
 }
 
 
-export type GrammarElement = ValueGrammarElement | ContainerGrammarElement | RepeatGrammarElement| IfGrammarElement | TrailerGrammarElement;
+export type GrammarElement = ContainerGrammarElement | RepeatGrammarElement| IfGrammarElement | TrailerGrammarElement;
 
 function removeNulls<T>(t: T | null | undefined): t is T {
     return t != null;

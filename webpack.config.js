@@ -1,11 +1,15 @@
 const path = require('path')
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin')
+const webpack = require('webpack');
 
 module.exports = {
-    entry: './src/modules/main.ts',
+    entry: {
+        app: './src/modules/main.ts',
+    },
+    // mode: 'production',
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'app.bundle.js'
+        filename: '[name].bundle.js'
     },
     module: {
         rules: [
@@ -25,11 +29,24 @@ module.exports = {
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],
-        plugins: [new TsconfigPathsPlugin()]
+        plugins: [
+            new TsconfigPathsPlugin()
+        ]
+    },
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                commons: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: 'vendors',
+                    chunks: 'all'
+                }
+            }
+        }
     },
     externals: {
-        'react': 'React',
-        'react-dom': 'ReactDOM'
+
+        'esprima': 'esprima', // https://github.com/nodeca/js-yaml/issues/230
     },
     devServer: {
         publicPath: '/dist/',
