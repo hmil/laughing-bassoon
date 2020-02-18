@@ -26,10 +26,10 @@ export class Grammar {
         function importElements(source: ReadonlyArray<GrammarInstruction>): GrammarElement[] {
             return source.map(content => {
                 switch (content.type) {
-                    case 'container': 
+                    case 'container':
                         return db.create(ContainerGrammarElement, {
                             id: content.id,
-                            content: [...importElements(content.content), Grammar.createTrailer(db)],
+                            content: [...importElements(content.content)],
                             type: 'container',
                             ref: content.ref,
                             size: content.size,

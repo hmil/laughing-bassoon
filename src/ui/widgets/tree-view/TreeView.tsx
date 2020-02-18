@@ -115,8 +115,6 @@ export function TreeView<T>(props: TreeViewProps<T>) {
                     scrollRef.current.scrollBy(0, 10);
                 }
             }
-
-            // TODO: Prevent element from dropping into itself (infinite recursion)
         } else {
             setDragAnchor(currentY);
         }
